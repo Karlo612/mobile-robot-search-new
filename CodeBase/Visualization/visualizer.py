@@ -27,15 +27,10 @@ class Visualizer:
 
         self.draw_grid()
 
-    # ---------------------------------------------------------
-    # 🔹 Helper: Convert grid cell to CENTER position
-    # ---------------------------------------------------------
+
     def _to_center(self, gx, gy):
         return gx + 0.5, gy + 0.5
 
-    # ---------------------------------------------------------
-    # DRAW BACKGROUND GRID
-    # ---------------------------------------------------------
     def draw_grid(self):
         """Draw obstacles and free space squares."""
         for gy in range(self.grid_map.height):
@@ -43,9 +38,6 @@ class Visualizer:
                 color = "gray" if self.grid_map.is_obstacle(gx, gy) else "cyan"
                 self._draw_cell(gx, gy, color)
 
-    # ---------------------------------------------------------
-    # DRAW START/GOAL
-    # ---------------------------------------------------------
     def draw_start_goal(self, start, goal):
         sx, sy = start
         gx, gy = goal
@@ -56,9 +48,6 @@ class Visualizer:
         cx, cy = self._to_center(gx, gy)
         self.ax.scatter(cx, cy, s=300, c="green", marker="s")
 
-    # ---------------------------------------------------------
-    # DRAW SEARCH PROCESS
-    # ---------------------------------------------------------
     def draw_explored(self, gx, gy):
         cx, cy = self._to_center(gx, gy)
         self.ax.scatter(cx, cy, s=120, c="yellow", marker="s")
@@ -71,9 +60,6 @@ class Visualizer:
         cx, cy = self._to_center(gx, gy)
         self.ax.scatter(cx, cy, s=120, c="black", marker="s")
 
-    # ---------------------------------------------------------
-    # DRAW PATH
-    # ---------------------------------------------------------
     def draw_path_segment(self, x1, y1, x2, y2):
         x1, y1 = self._to_center(x1, y1)
         x2, y2 = self._to_center(x2, y2)
@@ -85,9 +71,6 @@ class Visualizer:
             x2, y2 = self._to_center(*path[i+1])
             self.ax.plot([x1, x2], [y1, y2], "-k", linewidth=3)
 
-    # ---------------------------------------------------------
-    # INTERNAL: Draw background grid rectangles
-    # ---------------------------------------------------------
     def _draw_cell(self, gx, gy, color):
         """Draw a grid square (background)."""
         self.ax.add_patch(Rectangle(

@@ -5,10 +5,8 @@ from Environment.obstacle import Obstacle
 
 class ObstacleInflator:
     """
-    Inflated grid map where cells within robot radius of an obstacle become blocked
-    Produces a collision grid (occupancy grid).
+    in the grid map where cells within robot radius of an obstacle makes it blocked
     """
-
     def __init__(self, robot_radius):
 
         self.grid_map = None
