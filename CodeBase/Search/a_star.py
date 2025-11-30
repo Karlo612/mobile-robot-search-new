@@ -12,19 +12,12 @@ class AStarPlanner(Planner):
         super().__init__(grid_map,motion_model,visualizer)
         
     def heuristic(self, a, b):
-        """
-        Heuristic: Manhattan distance (fast, grid-friendly).
-        a = (gx1, gy1)
-        b = (gx2, gy2)
-        """
         x1, y1 = a
         x2, y2 = b
         return abs(x1 - x2) + abs(y1 - y2)
 
     def get_neighbors(self, gx, gy):
-        """
-        sets motion model 4n or 8n and returns neighbors.
-        """
+
         if self.motion_model == "4n":
             moves = [
                 (1, 0), (-1, 0),
@@ -45,11 +38,9 @@ class AStarPlanner(Planner):
 
     def plan(self, start, goal):
         """
-        Standard A* search with priority queue.
         start = (sx, sy)
         goal  = (gx, gy)
         """
-
         sx, sy = start
         gx, gy = goal
 
@@ -68,9 +59,6 @@ class AStarPlanner(Planner):
             vis.draw_start_goal(start, goal)
             vis.update()
 
-        # -----------------------------
-        # Main A* Loop
-        # -----------------------------
         while open_set:
             _, current = heapq.heappop(open_set)
             cx, cy = current
