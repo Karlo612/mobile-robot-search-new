@@ -26,6 +26,7 @@ class NavigationSystem:
         self.goal_grid = config["goal_grid"]
 
         # reading Planner & visualization settings
+        self.motion_type = config.get("motion", "8n")
         self.search_type = config["planner"]
         self.visualize_search = config["visualize_search"]
                 
@@ -98,7 +99,7 @@ class NavigationSystem:
         planner_name = self.search_type.upper()
 
         if planner_name == "ASTAR":
-            planner = AStarPlanner(grid_map, visualizer=vis)
+            planner = AStarPlanner(grid_map,motion_model=self.motion_type, visualizer=vis)
             path = self.execute_planner(planner, robot, vis)
         else:
             raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")

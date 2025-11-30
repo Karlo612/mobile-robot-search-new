@@ -8,8 +8,8 @@ class AStarPlanner(Planner):
     """
     A* search algorithm (grid-based).
     """
-    def __init__(self, grid_map, visualizer=None):
-        super().__init__(grid_map, visualizer)
+    def __init__(self, grid_map, motion_model, visualizer=None):
+        super().__init__(grid_map,motion_model,visualizer)
         
     def heuristic(self, a, b):
         """
@@ -23,14 +23,20 @@ class AStarPlanner(Planner):
 
     def get_neighbors(self, gx, gy):
         """
-        8-direction moves. Change to 4 if needed.
+        sets motion model 4n or 8n and returns neighbors.
         """
-        moves = [
-            (1, 0), (-1, 0),
-            (0, 1), (0, -1),
-            (1, 1), (1, -1),
-            (-1, 1), (-1, -1),
-        ]
+        if self.motion_model == "4n":
+            moves = [
+                (1, 0), (-1, 0),
+                (0, 1), (0, -1),
+            ]
+        else:  # default: "8n"
+            moves = [
+                (1, 0), (-1, 0),
+                (0, 1), (0, -1),
+                (1, 1), (1, -1),
+                (-1, 1), (-1, -1),
+            ]
 
         for dx, dy in moves:
             nx, ny = gx + dx, gy + dy
