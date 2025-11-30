@@ -3,8 +3,7 @@ import numpy as np
 
 class GridMap:
     """
-    Stores free/obstacles as 0/1 values.
-    Coordinates here are GRID coordinates (integer indices).
+    Stores free/obstacles as 0/1 in GRID coordinates
     grid[row][column]  → grid[gy][gx]
     """
 

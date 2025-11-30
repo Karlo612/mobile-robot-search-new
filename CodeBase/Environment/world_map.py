@@ -3,32 +3,9 @@ class WorldMap:
     WorldMap handles the conversion between:
     - GRID coordinates (cell indices: gx, gy)
     - WORLD coordinates (continuous meters: wx, wy)
-
-    This class does NOT store occupancy values.
-    It only manages geometry and coordinate transformations.
-
-    Why needed?
-    - Robot moves in real-world space (meters)
-    - Sensors produce measurements in meters
-    - Grid maps use integer cell coordinates (gx, gy)
-    - Resolution and origin allow mapping between the two systems
     """
 
     def __init__(self, origin, resolution):
-        """
-        Parameters:
-            origin: [origin_x, origin_y]
-                Real-world coordinate (meters) of the grid's (0,0) cell.
-                Example: origin = [0, 0] means grid(0,0) is at world (0m, 0m).
-
-            resolution:
-                Size of one grid cell in meters.
-                Example: resolution = 0.5 → each grid cell is 0.5m × 0.5m
-
-        Purpose:
-            - Store the geometric transformation parameters
-            - These are used in grid_to_world() and world_to_grid()
-        """
         self.origin_x = origin[0]
         self.origin_y = origin[1]
         self.resolution = resolution
