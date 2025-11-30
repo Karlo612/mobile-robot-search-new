@@ -16,20 +16,22 @@ class Visualizer:
     def setup(self):
         h = self.grid_map.height
         w = self.grid_map.width
+        s = self.cell_size
 
-        # Grid boundaries
-        self.ax.set_xlim(0, w)
-        self.ax.set_ylim(0, h)
+        # world coordinate boundaries
+        self.ax.set_xlim(0, w * s)
+        self.ax.set_ylim(0, h * s)
 
-        self.ax.set_xticks(np.arange(0, w+1, 1))
-        self.ax.set_yticks(np.arange(0, h+1, 1))
+        # ticks every cell
+        self.ax.set_xticks(np.arange(0, w * s + s, s))
+        self.ax.set_yticks(np.arange(0, h * s + s, s))
+
         self.ax.grid(True)
-
         self.draw_grid()
 
-
     def _to_center(self, gx, gy):
-        return gx + 0.5, gy + 0.5
+        s = self.cell_size
+        return gx * s + s/2, gy * s + s/2
 
     def draw_grid(self):
         """Draw obstacles and free space squares."""
@@ -72,11 +74,12 @@ class Visualizer:
             self.ax.plot([x1, x2], [y1, y2], "-k", linewidth=3)
 
     def _draw_cell(self, gx, gy, color):
+        s = self.cell_size
         """Draw a grid square (background)."""
         self.ax.add_patch(Rectangle(
-            (gx, gy),   # bottom-left
-            1.0,        # width
-            1.0,        # height
+            (gx*s, gy*s),   # bottom-left
+            s,        # width
+            s,        # height
             facecolor=color,
             edgecolor="none",
             alpha=0.9
