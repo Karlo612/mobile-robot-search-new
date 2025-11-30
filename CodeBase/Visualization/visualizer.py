@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
 import numpy as np
 
 class Visualizer:
@@ -29,6 +30,24 @@ class Visualizer:
         self.ax.grid(True)
         self.draw_grid()
 
+         # Add legend
+        legend_elements = [
+            Line2D([0], [0], marker='s', color='gray', markersize=10, label='Wall'),
+            Line2D([0], [0], marker='s', color='red', markersize=10, label='Inflated'),
+            Line2D([0], [0], marker='s', color='cyan', markersize=10, label='Free'),
+            Line2D([0], [0], marker='s', color='yellow', markersize=10, label='Explored'),
+            Line2D([0], [0], marker='s', color='blue', markersize=10, label='Frontier'),
+            Line2D([0], [0], marker='s', color='black', markersize=10, label='Blocked'),
+            Line2D([0], [0], color='m', lw=2, label='Partial Path'),
+            Line2D([0], [0], color='k', lw=2, label='Final Path'),
+        ]
+        self.ax.legend(
+            handles=legend_elements,
+            loc='upper left',
+            bbox_to_anchor=(1.03, 1),
+            fontsize=8
+        )
+
     def _to_center(self, gx, gy):
         s = self.cell_size
         return gx * s + s/2, gy * s + s/2
@@ -37,8 +56,14 @@ class Visualizer:
         """Draw obstacles and free space squares."""
         for gy in range(self.grid_map.height):
             for gx in range(self.grid_map.width):
-                color = "gray" if self.grid_map.is_obstacle(gx, gy) else "cyan"
+                if self.grid_map.is_obstacle(gx, gy):
+                    color = "gray"               # original walls
+                elif self.grid_map.is_inflated(gx, gy):
+                    color = "red"                # inflated obstacles
+                else:
+                    color = "cyan"               # free space
                 self._draw_cell(gx, gy, color)
+
 
     def draw_start_goal(self, start, goal):
         sx, sy = start
@@ -62,6 +87,12 @@ class Visualizer:
         cx, cy = self._to_center(gx, gy)
         self.ax.scatter(cx, cy, s=120, c="black", marker="s")
 
+    def draw_partial_path(self, path):
+        for i in range(len(path) - 1):
+            x1, y1 = path[i]
+            x2, y2 = path[i + 1]
+            self.draw_path_segment(x1, y1, x2, y2)
+     
     def draw_path_segment(self, x1, y1, x2, y2):
         x1, y1 = self._to_center(x1, y1)
         x2, y2 = self._to_center(x2, y2)

@@ -38,5 +38,6 @@ class ObstacleInflator:
                     ds = self.distance(obstacle.wx,obstacle.wy,x,y)
                     if ds < self.robot_radius:
                         self.grid_map.set_cell(gx, gy, self.BLOCKED)
+                        self.grid_map.mark_inflated(gx, gy)
                         break                    
                        

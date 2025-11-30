@@ -6,11 +6,7 @@ class Obstacle:
     """
 
     def __init__(self, gx, gy, wx=None, wy=None):
-        """
-        TODO:
-        - store grid coordinates (gx, gy)
-        - maybe world coordinates (wx, wy) if provided
-        """
+
         self.gx = gx
         self.gy = gy
         self.wx = wx

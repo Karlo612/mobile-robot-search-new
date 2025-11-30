@@ -13,8 +13,16 @@ class GridMap:
         self.resolution = resolution
         self.grid = grid_array
 
+        self.inflated_grid = [
+            [False for _ in range(self.width)]
+            for _ in range(self.height)
+        ]
+
     def set_cell(self, gx, gy, value):
         self.grid[gy][gx] = value
+
+    def mark_inflated(self, gx, gy):
+        self.inflated_grid[gy][gx] = True
 
     def get_cell(self, gx, gy):
         return self.grid[gy][gx]
@@ -27,3 +35,6 @@ class GridMap:
 
     def is_obstacle(self,gx, gy):
         return True if self.grid[gy][gx]==1 else False
+    
+    def is_inflated(self, gx, gy):
+        return self.inflated_grid[gy][gx]

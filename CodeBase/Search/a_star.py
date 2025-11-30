@@ -9,12 +9,13 @@ class AStarPlanner(Planner):
     A* search algorithm (grid-based).
     """
     def __init__(self, grid_map, motion_model, visualizer=None):
-        super().__init__(grid_map,motion_model,visualizer)
-        
+        super().__init__(grid_map, motion_model, visualizer)
+        self.res = grid_map.resolution
+
     def heuristic(self, a, b):
         x1, y1 = a
         x2, y2 = b
-        return abs(x1 - x2) + abs(y1 - y2)
+        return (abs(x1 - x2) + abs(y1 - y2)) * self.res
 
     def get_neighbors(self, gx, gy):
 
@@ -37,10 +38,6 @@ class AStarPlanner(Planner):
                 yield nx, ny
 
     def plan(self, start, goal):
-        """
-        start = (sx, sy)
-        goal  = (gx, gy)
-        """
         sx, sy = start
         gx, gy = goal
 
@@ -49,7 +46,7 @@ class AStarPlanner(Planner):
         heapq.heappush(open_set, (0, (sx, sy)))
 
         came_from = {}
-        g_cost = { (sx, sy): 0 }
+        g_cost = {(sx, sy): 0}
 
         closed = set()
 
@@ -68,9 +65,14 @@ class AStarPlanner(Planner):
 
             closed.add(current)
 
-            # Visualize explored cell
+            # Visualize explored cell + partial path
             if vis:
                 vis.draw_explored(cx, cy)
+                partial = self.build_partial_path(came_from, start, current)
+                for i in range(len(partial) - 1):
+                    x1, y1 = partial[i]
+                    x2, y2 = partial[i + 1]
+                    vis.draw_path_segment(x1, y1, x2, y2)
                 vis.update()
 
             # Goal reached
@@ -98,10 +100,21 @@ class AStarPlanner(Planner):
 
     # Cost function for movement
     def cost(self, x1, y1, x2, y2):
-        # Diagonals = sqrt(2), straight = 1
+        # Diagonal move occurs in 8n
         if x1 != x2 and y1 != y2:
-            return math.sqrt(2)
-        return 1
+            return math.sqrt(2) * self.res
+        # 4n move
+        return 1 * self.res
+
+    def build_partial_path(self, came_from, start, current):
+        path = [current]
+        while current in came_from:
+            current = came_from[current]
+            path.append(current)
+            if current == start:
+                break
+        path.reverse()
+        return path
 
     # Reconstruct path from came_from table
     def reconstruct_path(self, came_from, start, goal):
