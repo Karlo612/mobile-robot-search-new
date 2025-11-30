@@ -6,7 +6,8 @@
 
   "start_grid": [1, 1],
   "goal_grid": [14, 18],
-
+  
+  "motion": "8n",
   "planner": "ASTAR",
   "visualize_search": true
 }

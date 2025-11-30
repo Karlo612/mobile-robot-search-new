@@ -8,33 +8,24 @@ from Search.a_star import AStarPlanner
 from Visualization.visualizer import Visualizer
 
 class NavigationSystem:
-    """
-    Handles:
-    - map loading
-    - grid/world setup
-    - robot creation
-    - obstacle inflation
-    - path planning
-    - visualization
-    """
 
     def __init__(self, config):
 
         self.config = config
 
-        # Map
+        # reading Map onfig
         self.map_path = config["map_file"]
         self.grid_resolution = config["resolution"]
         self.grid_origin = config["origin"]
 
-        # Robot
+        # reading Robot config
         self.robot_radius = config["robot_radius"]
 
-        # Start/Goal in GRID coordinates
+        # reading Start/Goal in GRID coordinates
         self.start_grid = config["start_grid"]
         self.goal_grid = config["goal_grid"]
 
-        # Planner & visualization settings
+        # reading Planner & visualization settings
         self.search_type = config["planner"]
         self.visualize_search = config["visualize_search"]
                 

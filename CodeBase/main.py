@@ -8,8 +8,6 @@ def main():
     with open("Data/configs/config.json") as f:
         cfg = json.load(f)
 
-    print(cfg)
-
     # Create system orchestrator
     system = NavigationSystem(cfg)
 

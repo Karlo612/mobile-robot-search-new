@@ -99,7 +99,7 @@ class Visualizer:
             alpha=0.9
         ))
 
-    def update(self, pause=2):
+    def update(self, pause=1):
         plt.pause(pause)
 
     def show(self):
