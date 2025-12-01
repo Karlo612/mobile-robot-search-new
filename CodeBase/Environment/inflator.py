@@ -18,26 +18,34 @@ class ObstacleInflator:
     def distance(self,obs_x,obs_y,wx,wy):
         return math.sqrt((obs_x-wx)**2+(obs_y-wy)**2)
 
-    def inflate(self, grid_map,world_map,obstacles):
+    def inflate(self, grid_map, world_map, obstacles):
 
-        # blocks the cells which the robot cant move to based on the redius of the robot
- 
         self.grid_map = grid_map
         self.world_map = world_map
         self.obstacles = obstacles
 
         for gy in range(grid_map.height):
             for gx in range(grid_map.width):
-                if self.grid_map.is_obstacle(gx,gy):
+
+                if self.grid_map.is_obstacle(gx, gy):
                     continue
-                x,y= self.world_map.grid_to_world(gx,gy)
+
+                # center of this cell
+                wx, wy = self.world_map.grid_to_world(gx, gy)
+
                 for obstacle in self.obstacles:
-                    obs_wx, obs_wy = self.world_map.grid_to_world(obstacle.gx,obstacle.gy)
-                    obstacle.wx = obs_wx
-                    obstacle.wy = obs_wy
-                    ds = self.distance(obstacle.wx,obstacle.wy,x,y)
+                    obs_wx, obs_wy = self.world_map.grid_to_world(obstacle.gx, obstacle.gy)
+                    # distance between cell center and obstacle center
+                    ds = self.distance(obs_wx, obs_wy, wx, wy)
                     if ds < self.robot_radius:
-                        self.grid_map.set_cell(gx, gy, self.BLOCKED)
                         self.grid_map.mark_inflated(gx, gy)
-                        break                    
+                        break
+
+        #count = 0
+        #for y in range(grid_map.height):
+            #for x in range(grid_map.width):
+                #if grid_map.is_inflated(x, y):
+                    #count += 1
+
+        #print("TOTAL INFLATED CELLS:", count)                    
                        

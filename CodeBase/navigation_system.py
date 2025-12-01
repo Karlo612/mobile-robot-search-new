@@ -30,6 +30,21 @@ class NavigationSystem:
         self.search_type = config["planner"]
         self.visualize_search = config["visualize_search"]
                 
+    def check_robot_positions(self, robot, grid_map):
+        sx, sy = robot.sx, robot.sy
+        gx, gy = robot.gx, robot.gy
+
+        # start cell
+        if grid_map.is_obstacle(sx, sy) or grid_map.is_inflated(sx, sy):
+            print("Start cell is blocked for the robot radius!")
+            return False
+
+        # goal cell
+        #if grid_map.is_obstacle(gx, gy) or grid_map.is_inflated(gx, gy):
+            #print("ERROR: Goal cell is blocked for the robot radius!")
+            #return False
+
+        return True
 
     def setup_environment(self):
 
@@ -84,6 +99,9 @@ class NavigationSystem:
         #Inflate obstacles
         inflator = ObstacleInflator(robot.radius)
         inflator.inflate(grid_map,world_map,obstacles)
+
+        if not self.check_robot_positions(robot, grid_map):
+            return
 
         # Initialize visualization
         vis = None

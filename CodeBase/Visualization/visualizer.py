@@ -32,7 +32,7 @@ class Visualizer:
 
          # Add legend
         legend_elements = [
-            Line2D([0], [0], marker='s', color='gray', markersize=10, label='Wall'),
+            Line2D([0], [0], marker='s', color='gray', markersize=10, label='Obstacle'),
             Line2D([0], [0], marker='s', color='red', markersize=10, label='Inflated'),
             Line2D([0], [0], marker='s', color='cyan', markersize=10, label='Free'),
             Line2D([0], [0], marker='s', color='yellow', markersize=10, label='Explored'),
@@ -56,12 +56,11 @@ class Visualizer:
         """Draw obstacles and free space squares."""
         for gy in range(self.grid_map.height):
             for gx in range(self.grid_map.width):
-                if self.grid_map.is_obstacle(gx, gy):
-                    color = "gray"               # original walls
-                elif self.grid_map.is_inflated(gx, gy):
-                    color = "red"                # inflated obstacles
+                if self.grid_map.is_obstacle(gx, gy) and not self.grid_map.is_inflated(gx, gy):
+                    color = "gray"
                 else:
-                    color = "cyan"               # free space
+                    color = "cyan"  
+
                 self._draw_cell(gx, gy, color)
 
 
@@ -86,6 +85,10 @@ class Visualizer:
     def draw_blocked(self, gx, gy):
         cx, cy = self._to_center(gx, gy)
         self.ax.scatter(cx, cy, s=120, c="black", marker="s")
+
+    def draw_inflated(self, gx, gy):
+        cx, cy = self._to_center(gx, gy)
+        self.ax.scatter(cx, cy, s=130, c="red", marker="s")
 
     def draw_partial_path(self, path):
         for i in range(len(path) - 1):

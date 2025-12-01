@@ -17,15 +17,3 @@ class MobileRobot:
         wx, wy = world_map.grid_to_world(self.sx, self.sy)
         self.x = wx
         self.y = wy
-
-
-
-    def attach_planner(self, planner):
-        # Optional
-        # TODO: store planner object
-        pass
-
-    def plan_to_goal(self):
-        # Optional
-        # TODO: return planner.plan(self.start_grid, self.goal_grid)
-        pass
