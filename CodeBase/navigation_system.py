@@ -4,7 +4,8 @@ from Environment.grid_map import GridMap
 from Environment.inflator import ObstacleInflator
 from Environment.mobile_robot import MobileRobot
 from Environment.world_map import WorldMap
-from Search.a_star import AStarPlanner
+#from Search.a_star import AStarPlanner
+from Search.Astar_graph_based import AStarPlanner_graphbased
 from Visualization.visualizer import Visualizer
 
 class NavigationSystem:
@@ -117,7 +118,7 @@ class NavigationSystem:
         planner_name = self.search_type.upper()
 
         if planner_name == "ASTAR":
-            planner = AStarPlanner(grid_map,motion_model=self.motion_type, visualizer=vis)
+            planner = AStarPlanner_graphbased(grid_map,motion_model=self.motion_type, visualizer=vis)
             path = self.execute_planner(planner, robot, vis)
         else:
             raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")
