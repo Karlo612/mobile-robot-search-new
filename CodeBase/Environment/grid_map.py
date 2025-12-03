@@ -39,11 +39,5 @@ class GridMap:
     def is_inflated(self, gx, gy):
         return self.inflated_grid[gy][gx]
     
-    def get_neighbors(self, position):
-        neighbors = []
-        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-        for direction in directions:
-            neighbor = (position[0] + direction[0], position[1] + direction[1])
-            if self.is_inside(neighbor) and self.is_free(neighbor):
-                neighbors.append(neighbor)
-        return neighbors
+    
+    
