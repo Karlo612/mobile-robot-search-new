@@ -1,6 +1,16 @@
 from Search.planner import Planner
-import heapq
+from heapdict import heapdict
 import math
+
+class Node:
+    def __init__(self, state, g=0.0, f=0.0, parent=None):
+        self.state = state      # (x, y)
+        self.g = g              # path cost
+        self.f = f              # evaluation function g+h
+        self.parent = parent    # pointer to parent Node
+
+    def __repr__(self):
+        return f"Node(state={self.state}, g={self.g}, f={self.f})"
 
 class AStarPlanner_graphbased(Planner):
 
@@ -11,9 +21,19 @@ class AStarPlanner_graphbased(Planner):
     def heuristic(self, a, b):
         x1, y1 = a
         x2, y2 = b
-        return (abs(x1 - x2) + abs(y1 - y2)) * self.res
+        dx, dy = abs(x1-x2), abs(y1-y2)
+
+        if self.motion_model == "4n":
+            #return Manhattan distance
+            return (dx + dy) * self.res
+        else:  
+            # "8n" - returns Euclidean distance
+            #return (math.sqrt(2)*min(dx,dy) + abs(dx-dy)) * self.res
+             # "8n" - returns octile distance
+            return (max(dx, dy) + (math.sqrt(2) - 1) * min(dx, dy))*self.res
 
     def get_neighbors(self, gx, gy):
+        #generated neigbour coordinates based on the type of mothion '4n' or '8n'  
 
         if self.motion_model == "4n":
             moves = [(1,0), (-1,0), (0,1), (0,-1)]
@@ -38,28 +58,25 @@ class AStarPlanner_graphbased(Planner):
             yield (nx, ny)
 
     def cost(self, x1, y1, x2, y2):
+        # calculated cost from moving from current cell to the child cell
         if x1 != x2 and y1 != y2:
             return math.sqrt(2) * self.res
         return 1 * self.res
 
     def plan(self, start, goal):
+        # this funtion runs the A-star algorithm
 
-        sx, sy = start
-        gx, gy = goal
-
-        # openset priority queue
-        OPEN = []
-        heapq.heappush(OPEN, (0, start))
-
-        # dictionary for open set membership test
-        open_membership = {start: 0}
-
+        # openset priority queue 
+        OPEN = heapdict()
         # CLOSED set
         CLOSED = set()
+        # used to stores Node object and track parent to construct path 
+        NODES = {} 
 
-        # parent tracker, g-cost
-        parent = {}
-        g_cost = {start: 0}
+        # Create start node
+        start_node = Node(start, g=0.0, f=self.heuristic(start, goal))
+        OPEN[start] = start_node.f        
+        NODES[start] = start_node
 
         vis = self.visualizer
         if vis:
@@ -68,21 +85,27 @@ class AStarPlanner_graphbased(Planner):
 
         while OPEN:
 
-            f, current = heapq.heappop(OPEN)
-            open_membership.pop(current, None)
+            current_state, _ = OPEN.popitem()
+            current = NODES[current_state]
+            # Print f-cost for debug
+            print(
+                f"EXPAND {current_state}: "
+                f"g={current.g:.3f}, "
+                f"h={self.heuristic(current_state, goal):.3f}, "
+                f"f={current.f:.3f}"
+            )
+            if current_state == goal:
+                return self.reconstruct_path(current)
 
-            if current == goal:
-                return self.reconstruct_path(parent, start, goal)
+            CLOSED.add(current_state)
 
-            CLOSED.add(current)
-
-            cx, cy = current
+            cx, cy = current_state
 
             if vis:
                 vis.draw_explored(cx, cy)
 
                 # draw partial path from start → current
-                partial = self.build_partial_path(parent, start, current)
+                partial = self.build_partial_path(current)
                 for i in range(len(partial) - 1):
                     x1, y1 = partial[i]
                     x2, y2 = partial[i+1]
@@ -91,55 +114,53 @@ class AStarPlanner_graphbased(Planner):
                 vis.update()
 
             for child in self.get_neighbors(cx, cy):
+
+                v = child 
                 
-                if child in CLOSED:
+                if v in CLOSED:
                     continue
 
-                g = g_cost[current] + self.cost(cx, cy, child[0], child[1])
-                f = g + self.heuristic(child, goal)
+                new_g = current.g + self.cost(cx, cy, v[0], v[1])
+                new_f = new_g + self.heuristic(v, goal)
+            
+                if v not in OPEN:
+                    # child not in openset means new node
 
-                # child not in OPEN → NEW NODE
-                if child not in open_membership:
-
-                    g_cost[child] = g
-                    parent[child] = current
-
-                    heapq.heappush(OPEN, (f, child))
-                    open_membership[child] = f
+                    new_node = Node(v, g=new_g, f=new_f, parent=current)
+                    NODES[v] = new_node
+                    OPEN[v] = new_f
 
                     if vis:
-                        vis.draw_frontier(child[0], child[1])
+                        vis.draw_frontier(v[0], v[1])
 
                 else:
-                    # improved path found
-                    old_f = open_membership[child]
-                    if f < old_f:
+                    # otherwise an improved path found , so update the 
+                    old_f = OPEN[v]
+                    if new_f < old_f:
+                        
+                        #update the properting of v in the node list
+                        node = NODES[v]
+                        node.f = new_f
+                        node.g = new_g
+                        node.parent = current
 
-                        g_cost[child] = g
-                        parent[child] = current
-
-                        heapq.heappush(OPEN, (f, child))
-                        open_membership[child] = f
+                        # update the f vaule of the v - node in the priotiy queue with the new f vaule
+                        OPEN[v] = new_f  
 
                         if vis:
                             vis.draw_frontier(child[0], child[1])
         return None
 
-    def reconstruct_path(self, parent, start, goal):
-        path = [goal]
-        cur = goal
-        while cur != start:
-            cur = parent[cur]
-            path.append(cur)
-        path.reverse()
-        return path
+    def reconstruct_path(self, node):
+        path = []
+        while node is not None:
+            path.append(node.state)
+            node = node.parent
+        return list(reversed(path))
 
-    def build_partial_path(self, parent, start, current):
-        path = [current]
-        while current in parent:
-            current = parent[current]
-            path.append(current)
-            if current == start:
-                break
-        path.reverse()
-        return path
+    def build_partial_path(self, node):
+        path = []
+        while node is not None:
+            path.append(node.state)
+            node = node.parent
+        return list(reversed(path))

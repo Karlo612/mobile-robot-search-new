@@ -1,5 +1,4 @@
 # main.py
-
 from navigation_system import NavigationSystem
 import json
 
