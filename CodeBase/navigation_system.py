@@ -1,14 +1,14 @@
 # navigation_system.py
-from Environment.map_loader import MapLoader
-from Environment.grid_map import GridMap
-from Environment.inflator import ObstacleInflator
-from Environment.mobile_robot import MobileRobot
-from Environment.world_map import WorldMap
+from .Environment.map_loader import MapLoader
+from .Environment.grid_map import GridMap
+from .Environment.inflator import ObstacleInflator
+from .Environment.mobile_robot import MobileRobot
+from .Environment.world_map import WorldMap
 #from Search.a_star import AStarPlanner
-from Search.Astar_graph_based import AStarPlanner_graphbased
-from Visualization.visualizer import Visualizer
+from .Search.Astar_graph_based import AStarPlanner_graphbased
+from .Visualization.visualizer import Visualizer
 # Import DFSPlanner
-from Search.dfs import DFSPlanner
+from .Search.dfs import DFSPlanner
 
 class NavigationSystem:
 
@@ -121,10 +121,10 @@ class NavigationSystem:
         planner_name = self.search_type.upper()
         if planner_name == "ASTAR":
             planner = AStarPlanner_graphbased(grid_map, motion_model=self.motion_type, visualizer=vis)
-            path =self.execute_planner(planner, robot, vis)
+            path = self.execute_planner(planner, robot, vis)
         elif planner_name == "DFS":  #condition for DFS
             planner = DFSPlanner(grid_map, motion_model=self.motion_type, visualizer=vis)  # Use DFS planner
-            path =self.execute_planner(planner, robot, vis)
+            path = self.execute_planner(planner, robot, vis)
         else:
             raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")
         

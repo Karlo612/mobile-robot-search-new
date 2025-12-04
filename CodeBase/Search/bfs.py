@@ -1,7 +1,7 @@
 # bfs.py
 
 from collections import deque
-from Search.planner import Planner
+from .planner import Planner
 
 class BFS_Planner(Planner):
     """

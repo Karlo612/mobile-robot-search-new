@@ -1,5 +1,5 @@
-from Environment.map_loader import MapLoader
-from Environment.grid_map import GridMap
+from .map_loader import MapLoader
+from .grid_map import GridMap
 
 class MobileRobot:
 

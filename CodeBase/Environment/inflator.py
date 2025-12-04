@@ -1,7 +1,7 @@
 # inflator.py
 import math
 import numpy
-from Environment.obstacle import Obstacle
+from .obstacle import Obstacle
 
 class ObstacleInflator:
     """

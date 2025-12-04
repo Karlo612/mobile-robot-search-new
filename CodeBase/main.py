@@ -1,5 +1,5 @@
 # main.py
-from navigation_system import NavigationSystem
+from .navigation_system import NavigationSystem
 import json
 
 def main():

@@ -2,7 +2,7 @@
 
 import pandas as pd
 import numpy as np
-from Environment.obstacle import Obstacle
+from .obstacle import Obstacle
 
 class MapLoader:
     """
