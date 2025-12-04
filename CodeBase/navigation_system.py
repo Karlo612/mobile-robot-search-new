@@ -7,6 +7,8 @@ from Environment.world_map import WorldMap
 #from Search.a_star import AStarPlanner
 from Search.Astar_graph_based import AStarPlanner_graphbased
 from Visualization.visualizer import Visualizer
+# Import DFSPlanner
+from Search.dfs import DFSPlanner
 
 class NavigationSystem:
 
@@ -115,14 +117,17 @@ class NavigationSystem:
             )
 
         #setup planner
+        # Initialize planner based on search_type
         planner_name = self.search_type.upper()
-
         if planner_name == "ASTAR":
-            planner = AStarPlanner_graphbased(grid_map,motion_model=self.motion_type, visualizer=vis)
-            path = self.execute_planner(planner, robot, vis)
+            planner = AStarPlanner_graphbased(grid_map, motion_model=self.motion_type, visualizer=vis)
+            path =self.execute_planner(planner, robot, vis)
+        elif planner_name == "DFS":  #condition for DFS
+            planner = DFSPlanner(grid_map, motion_model=self.motion_type, visualizer=vis)  # Use DFS planner
+            path =self.execute_planner(planner, robot, vis)
         else:
             raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")
-
+        
         if path:
             gx, gy = path[-1]
             robot.x, robot.y = world_map.grid_to_world(gx, gy)
