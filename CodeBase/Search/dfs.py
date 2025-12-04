@@ -1,4 +1,4 @@
-from CodeBase.Search.planner import Planner
+from .planner import Planner
 
 class DFSPlanner(Planner):
     """
