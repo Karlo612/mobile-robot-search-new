@@ -164,4 +164,3 @@ class AStarPlanner_graphbased(Planner):
             path.append(node.state)
             node = node.parent
         return list(reversed(path))
-    
