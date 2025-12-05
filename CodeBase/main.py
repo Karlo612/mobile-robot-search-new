@@ -1,17 +1,25 @@
 # main.py
 from .navigation_system import NavigationSystem
+from .Benchmark.comparator import Comparator
 import json
 
 def main():
-    # Load config
     with open("Data/configs/config.json") as f:
         cfg = json.load(f)
 
-    # Create system orchestrator
-    system = NavigationSystem(cfg)
+    mode = cfg.get("mode", "nav").lower()
 
-    # Run entire pipeline
-    system.run()
+    if mode == "nav":
+        system = NavigationSystem(cfg)
+        system.run()
+
+    elif mode == "bench":
+        print("\n=== Running Benchmark Mode ===")
+        cmp = Comparator()
+        cmp.run_and_plot()
+
+    else:
+        raise ValueError(f"Unknown config mode: {mode}")
 
 if __name__ == "__main__":
     main()

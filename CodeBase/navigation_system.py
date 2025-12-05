@@ -4,9 +4,10 @@ from .Environment.grid_map import GridMap
 from .Environment.inflator import ObstacleInflator
 from .Environment.mobile_robot import MobileRobot
 from .Environment.world_map import WorldMap
-#from Search.a_star import AStarPlanner
-from .Search.Astar_graph_based import AStarPlanner_graphbased
-from .Search.Astar_tree_based import AStarPlanner_treebased
+from .Search.astar_graph_based import AStarPlanner_graphbased
+from .Search.astar_tree_based import AStarPlanner_treebased
+from .Search.bfs import BFSPlanner_graphbased
+from .Search.bfs import BFSPlanner_treesearch
 from .Visualization.visualizer import Visualizer
 # Import DFSPlanner
 from .Search.dfs import DFSPlanner
@@ -130,6 +131,16 @@ class NavigationSystem:
                 planner = AStarPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis)
 
             path = self.execute_planner(planner, robot, vis)
+
+        elif planner_name == "BFS":  
+            if self.use_tree_search:
+                print("Running BFS (TREE-BASED)")
+                planner = BFSPlanner_treesearch(grid_map, motion_model=self.motion_type, visualizer=vis)
+            else:
+                print("Running BFS (GRAPH-BASED)")
+                planner = BFSPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis) 
+            path = self.execute_planner(planner, robot, vis)
+
         elif planner_name == "DFS":  #condition for DFS
             planner = DFSPlanner(grid_map, motion_model=self.motion_type, visualizer=vis)  # Use DFS planner
             path = self.execute_planner(planner, robot, vis)

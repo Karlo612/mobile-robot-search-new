@@ -8,7 +8,8 @@
   "goal_grid": [13, 18],
   
   "motion": "8n",
-  "planner": "ASTAR",
+  "planner": "BFS",
   "visualize_search": true,
-  "use_tree_search": false
+  "use_tree_search": true,
+  "mode": "nav" 
 }
