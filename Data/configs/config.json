@@ -9,5 +9,6 @@
   
   "motion": "8n",
   "planner": "ASTAR",
-  "visualize_search": true
+  "visualize_search": true,
+  "use_tree_search": false
 }

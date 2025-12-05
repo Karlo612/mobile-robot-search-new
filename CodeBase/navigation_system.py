@@ -6,6 +6,7 @@ from .Environment.mobile_robot import MobileRobot
 from .Environment.world_map import WorldMap
 #from Search.a_star import AStarPlanner
 from .Search.Astar_graph_based import AStarPlanner_graphbased
+from .Search.Astar_tree_based import AStarPlanner_treebased
 from .Visualization.visualizer import Visualizer
 # Import DFSPlanner
 from .Search.dfs import DFSPlanner
@@ -32,6 +33,7 @@ class NavigationSystem:
         self.motion_type = config.get("motion", "8n")
         self.search_type = config["planner"]
         self.visualize_search = config["visualize_search"]
+        self.use_tree_search = config.get("use_tree_search", False)
                 
     def check_robot_positions(self, robot, grid_map):
         sx, sy = robot.sx, robot.sy
@@ -120,7 +122,13 @@ class NavigationSystem:
         # Initialize planner based on search_type
         planner_name = self.search_type.upper()
         if planner_name == "ASTAR":
-            planner = AStarPlanner_graphbased(grid_map, motion_model=self.motion_type, visualizer=vis)
+            if self.use_tree_search:
+                print("Running A* (TREE-BASED)")
+                planner = AStarPlanner_treebased(grid_map,motion_model=self.motion_type,visualizer=vis)
+            else:
+                print("Running A* (GRAPH-BASED)")
+                planner = AStarPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis)
+
             path = self.execute_planner(planner, robot, vis)
         elif planner_name == "DFS":  #condition for DFS
             planner = DFSPlanner(grid_map, motion_model=self.motion_type, visualizer=vis)  # Use DFS planner
