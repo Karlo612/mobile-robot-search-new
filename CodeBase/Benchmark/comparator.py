@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from CodeBase.Benchmark.grid_factory import generate_grid
 from CodeBase.Search.astar_graph_based import AStarPlanner_graphbased
 from CodeBase.Search.astar_tree_based import AStarPlanner_treebased
-#from CodeBase.Search.bfs import BFSPlanner
+from CodeBase.Search.bfs import BFSPlanner_graphbased, BFSPlanner_treesearch
 #from CodeBase.Search.dfs import DFSPlanner
 from CodeBase.Benchmark.plotter import plot_all
 
@@ -15,8 +15,9 @@ from CodeBase.Benchmark.plotter import plot_all
 # ---------------------------------------------------------
 PLANNERS = {
     "A* Graph": AStarPlanner_graphbased,
-    "A* Tree":  AStarPlanner_treebased,
-    # "BFS":      BFSPlanner,
+    #"A* Tree":  AStarPlanner_treebased,
+    "BFS Graph": BFSPlanner_graphbased#,
+    #"BFS Tree":  BFSPlanner_treesearch,
     # "DFS":      DFSPlanner,
 }
 

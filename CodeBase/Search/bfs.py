@@ -10,6 +10,7 @@ class BFSPlanner_graphbased(Planner):
 
     def __init__(self, grid_map, motion_model, visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
+        self.expanded_count = 0
         # BFS does not use heuristic or movement costs
 
     def get_neighbors(self, gx, gy):
@@ -68,6 +69,7 @@ class BFSPlanner_graphbased(Planner):
             #  parent ← the first node in O
             current = open_queue.popleft()
             cx, cy = current
+            self.expanded_count += 1
 
             # C ← parent.state 
             closed.add(current)
