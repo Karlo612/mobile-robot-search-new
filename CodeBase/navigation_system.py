@@ -8,9 +8,8 @@ from .Search.astar_graph_based import AStarPlanner_graphbased
 from .Search.astar_tree_based import AStarPlanner_treebased
 from .Search.bfs import BFSPlanner_graphbased
 from .Search.bfs import BFSPlanner_treesearch
+from .Search.dfs import DFSPlanner_graphbased
 from .Visualization.visualizer import Visualizer
-# Import DFSPlanner
-from .Search.dfs import DFSPlanner
 
 class NavigationSystem:
 
@@ -142,7 +141,12 @@ class NavigationSystem:
             path = self.execute_planner(planner, robot, vis)
 
         elif planner_name == "DFS":  #condition for DFS
-            planner = DFSPlanner(grid_map, motion_model=self.motion_type, visualizer=vis)  # Use DFS planner
+            if self.use_tree_search:
+                print("not ready yet")
+                #planner = BFSPlanner_treesearch(grid_map, motion_model=self.motion_type, visualizer=vis)
+            else:
+                print("Running DFS (GRAPH-BASED)")
+                planner = DFSPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis) 
             path = self.execute_planner(planner, robot, vis)
         else:
             raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")

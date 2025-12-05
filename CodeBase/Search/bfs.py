@@ -4,17 +4,14 @@ from .planner import Planner
 from collections import deque, defaultdict
 
 class BFSPlanner_graphbased(Planner):
-    """
-    Breadth-First Search (BFS) planner strictly following the provided pseudocode.
-    """
+
 
     def __init__(self, grid_map, motion_model, visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
         self.expanded_count = 0
-        # BFS does not use heuristic or movement costs
+
 
     def get_neighbors(self, gx, gy):
-        # Same neighbor generation as in A* (respects 4n or 8n)
         if self.motion_model == "4n":
             moves = [
                 (1, 0), (-1, 0),
@@ -50,37 +47,30 @@ class BFSPlanner_graphbased(Planner):
             vis.draw_start_goal(start, goal)
             vis.update()
 
-        #s == g then return node
+
         if start == goal:
             return [start]
 
-        # O ← node, an FIFO queue
         open_queue = deque([start])
-        in_open = set([start])   # tracks membership in O
+        in_open = set([start])  
 
-        # C ← ∅
         closed = set()
-
-        # To reconstruct the path
         parent = {}
 
-        # while O != ∅ do
         while open_queue:
-            #  parent ← the first node in O
+
             current = open_queue.popleft()
             cx, cy = current
             self.expanded_count += 1
 
-            # C ← parent.state 
             closed.add(current)
 
-            # Visualization explored
             if vis:
                 if self.grid_map.is_inflated(cx, cy):
                     vis.draw_inflated(cx, cy)
                 else:
                     vis.draw_explored(cx, cy)
-                # draw partial path for feedback
+
                 partial = self.build_partial_path(parent, start, current)
                 for i in range(len(partial) - 1):
                     x1, y1 = partial[i]
@@ -88,11 +78,11 @@ class BFSPlanner_graphbased(Planner):
                     vis.draw_path_segment(x1, y1, x2, y2)
                 vis.update()
 
-            # for child in successor do
+
             for nx, ny in self.get_neighbors(cx, cy):
                 v = (nx, ny)
 
-                # if v is not in C 
+
                 if (v not in closed) and (v not in in_open):
                     if v == goal:
                         parent[v] = current
@@ -100,7 +90,7 @@ class BFSPlanner_graphbased(Planner):
                     open_queue.append(v)
                     in_open.add(v)
                     parent[v] = current
-                    # Visualization for frontier
+
                     if vis:
                         if self.grid_map.is_inflated(nx, ny):
                             vis.draw_inflated(nx, ny)
@@ -128,10 +118,6 @@ class BFSPlanner_graphbased(Planner):
         return path
     
     
-
-        #-----------------------BFS TREE SEARCH-----------------
-
-
 class BFSPlanner_treesearch(Planner):
     """
     Breadth-First Search (BFS) planner in tree-search style.
@@ -170,13 +156,10 @@ class BFSPlanner_treesearch(Planner):
             vis.draw_start_goal(start, goal)
             vis.update()
 
-        # 3D-parent storage: parent[state][vid] = (parent_state, parent_vid)
-        parent = defaultdict(dict)
 
-        # queue entries: (state, vid)
+        parent = defaultdict(dict)
         queue = deque()
 
-        # root
         queue.append((start, 0))
         parent[start][0] = (None,None)
         self.counter = 1
@@ -219,9 +202,6 @@ class BFSPlanner_treesearch(Planner):
 
         return None
     
-   # ----------------------------------------
-    # SAFE 3D reconstruction
-    # ----------------------------------------
     def reconstruct_path_3d(self, parent, start, goal, vid):
         """
         Reconstruct full final path from goal back to start.
@@ -239,19 +219,17 @@ class BFSPlanner_treesearch(Planner):
             if cur_state == start:
                 break
 
-            # detect loops
             if (cur_state, cur_vid) in visited:
                 print("[ERROR] Loop detected in 3D final path!")
                 break
 
             visited.add((cur_state, cur_vid))
 
-            # validate parent entry
+
             if cur_state not in parent or cur_vid not in parent[cur_state]:
                 print("[ERROR] Missing parent link in 3D final path. Returning partial path.")
                 break
 
-            # follow parent
             prev_state, prev_vid = parent[cur_state][cur_vid]
 
             cur_state = prev_state
@@ -259,9 +237,6 @@ class BFSPlanner_treesearch(Planner):
 
         return list(reversed(path))
     
-    # ----------------------------------------
-    # Build partial path for visualization
-    # ----------------------------------------
     def build_partial_path_3d(self, parent, start, state, vid):
         """
         Returns partial path for visualization, safe version.
@@ -279,7 +254,7 @@ class BFSPlanner_treesearch(Planner):
             if cur_state == start:
                 break
 
-            # detect infinite loops
+
             if (cur_state, cur_vid) in visited:
                 print("[WARN] Loop in partial 3D path — breaking early.")
                 break

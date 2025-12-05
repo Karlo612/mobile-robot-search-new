@@ -1,19 +1,13 @@
 from .planner import Planner
-import math
+from collections import deque
 
-class DFSPlanner(Planner):
-    """
-    Depth First Search Planner that extends the base Planner class.
-    """
+class DFSPlanner_graphbased(Planner):
+
+
     def __init__(self, grid_map, motion_model="8n", visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
-        self.res = grid_map.resolution
-    
-    def cost(self, x1, y1, x2, y2):
-        if x1 != x2 and y1 != y2:
-            return math.sqrt(2) * self.res
-        return 1 * self.res
-    
+        self.expanded_count = 0
+
     def get_neighbors(self, gx, gy):
 
         if self.motion_model == "4n":
@@ -29,40 +23,75 @@ class DFSPlanner(Planner):
 
             if not self.grid_map.is_inside(nx, ny):
                 continue
+
             if self.grid_map.is_obstacle(nx, ny):
                 continue
+
             if self.grid_map.is_inflated(nx, ny):
                 if self.visualizer:
                     self.visualizer.draw_inflated(nx, ny)
                 continue
 
             yield (nx, ny)
-    
+
+
     def plan(self, start, goal):
-        """
-        Perform DFS to find a path from start to goal.
-        """
-        stack = [(start, [start])]  # stack of (current_position, path)
-        visited = set()  # to keep track of visited nodes
+
+        vis = self.visualizer
+        if vis:
+            vis.draw_start_goal(start, goal)
+            vis.update()
+
+
+        stack = [(start, None)]  
+        parent = {}          
+        closed = set()
 
         while stack:
-            (current_position, path) = stack.pop()
-            if current_position in visited:
-                continue
 
-            visited.add(current_position)
+            v, p = stack.pop()
 
-            # Check if we reached the goal
-            if current_position == goal:
-                return self.reconstruct_path(parent, start, goal)  # return the path to the goal
+            # store parent mapping
+            if p is not None:
+                parent[v] = p
 
-            # Get neighbors (assuming grid_map has a method to get valid neighbors)
-            for neighbor in self.grid_map.get_neighbors(current_position):
-                if neighbor not in visited:
-                    stack.append((neighbor, path + [neighbor]))
+            self.expanded_count += 1
 
-        return None  # return None if no path is found
-    
+            if vis:
+                vx, vy = v
+                vis.draw_explored(vx, vy)
+
+                partial = self.build_partial_path(parent, start, v)
+                for i in range(len(partial)-1):
+                    x1, y1 = partial[i]
+                    x2, y2 = partial[i+1]
+                    vis.draw_path_segment(x1, y1, x2, y2)
+                vis.update()
+
+
+            if v == goal:
+                return self.reconstruct_path(parent, start, goal)
+
+            closed.add(v)
+
+            cx, cy = v
+
+
+            for child in self.get_neighbors(cx, cy):
+
+
+                if child not in closed and child not in [s for s, _ in stack]:
+
+
+                    stack.append((child, v))
+
+                    if vis:
+                        vis.draw_frontier(child[0], child[1])
+
+
+        return None
+
+
     def reconstruct_path(self, parent, start, goal):
         path = [goal]
         cur = goal
