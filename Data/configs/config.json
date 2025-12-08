@@ -2,7 +2,7 @@
   "map_file": "Data/maps/map16x22.xlsx",
   "resolution": 1.0,
   "origin": [0, 0],
-  "robot_radius": 2,
+  "robot_radius": 0.5,
 
   "start_grid": [2, 3],
   "goal_grid": [13, 18],
@@ -11,5 +11,5 @@
   "planner": "DFS",
   "visualize_search": true,
   "use_tree_search": false,
-  "mode": "nav" 
+  "mode": "bench" 
 }

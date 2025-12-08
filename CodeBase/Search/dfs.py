@@ -7,6 +7,7 @@ class DFSPlanner_graphbased(Planner):
     def __init__(self, grid_map, motion_model="8n", visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
         self.expanded_count = 0
+        self.expansion_map = {}
 
     def get_neighbors(self, gx, gy):
 
@@ -56,6 +57,8 @@ class DFSPlanner_graphbased(Planner):
                 parent[v] = p
 
             self.expanded_count += 1
+            cx, cy = v
+            self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             if vis:
                 vx, vy = v

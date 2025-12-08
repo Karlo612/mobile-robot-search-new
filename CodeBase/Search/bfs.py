@@ -9,6 +9,7 @@ class BFSPlanner_graphbased(Planner):
     def __init__(self, grid_map, motion_model, visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
         self.expanded_count = 0
+        self.expansion_map = {}
 
 
     def get_neighbors(self, gx, gy):
@@ -62,6 +63,7 @@ class BFSPlanner_graphbased(Planner):
             current = open_queue.popleft()
             cx, cy = current
             self.expanded_count += 1
+            self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             closed.add(current)
 
@@ -127,6 +129,7 @@ class BFSPlanner_treesearch(Planner):
         super().__init__(grid_map, motion_model, visualizer)
         self.counter = 0
         self.expanded_count = 0
+        self.expansion_map = {}
 
     def get_neighbors(self, gx, gy):
         if self.motion_model == "4n":

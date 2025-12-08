@@ -103,4 +103,4 @@ def generate_grid(size, robot_radius=1.0, fill_ratio=0.15):
     # Step 6 — Select start and goal
     start, goal = pick_random_start_goal(grid_map)
 
-    return grid_map, start, goal
+    return grid_map, start, goal, obstacles
