@@ -56,7 +56,9 @@ class DFSPlanner_graphbased(Planner):
             if p is not None:
                 parent[v] = p
 
+            #generation of expansion count for report only
             self.expanded_count += 1
+            #generation of heatmap counter  for report only
             cx, cy = v
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 

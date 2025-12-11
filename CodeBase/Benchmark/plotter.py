@@ -1,3 +1,5 @@
+# CodeBase/Benchmark/plotter.py
+
 import os
 from typing import List, Dict
 
@@ -6,80 +8,67 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 
-# -----------------------------------------------------------
-#  Draw a single test case figure
-# -----------------------------------------------------------
-def plot_single_test(test: Dict):
+# ================================================================
+# Helper: heatmap plotting for a single test (all planners)
+# ================================================================
+def _plot_heatmaps_for_test(test: Dict):
+    title      = test["title"]
+    start      = test["start"]
+    goal       = test["goal"]
+    obstacles  = test["obstacles"]
+    planners   = list(test["planners"].keys())
 
-    title       = test["title"]
-    size        = test["size"]
-    start       = test["start"]
-    goal        = test["goal"]
-    radius      = test["radius"]
-    resolution  = test["resolution"]
-    obstacles   = test["obstacles"]
-    planners    = list(test["planners"].keys())
+    n_planners = len(planners)
+    if n_planners == 0:
+        return
 
-    # Metrics
-    runtimes   = [test["planners"][p]["runtime"]    for p in planners]
-    expansions = [test["planners"][p]["expansions"] for p in planners]
-    path_lens  = [test["planners"][p]["path_len"]   for p in planners]
-    mem_kb     = [test["planners"][p]["memory_kb"]  for p in planners]
+    # Arrange heatmaps in a grid of 3 columns
+    n_cols = 3
+    n_rows = int(np.ceil(n_planners / n_cols))
 
-    # Figure layout
-    fig = plt.figure(figsize=(14, 12))
-    gs = fig.add_gridspec(3, 3, height_ratios=[1, 4, 3], hspace=0.8)
-    fig.suptitle(title, fontsize=16, fontweight="bold")
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        figsize=(5 * n_cols, 5 * n_rows),
+        squeeze=False
+    )
+    fig.suptitle(f"{title} – Expansion Heatmaps", fontsize=16, fontweight="bold")
 
-    # --------------------------------------------------------
-    # Row 1: Metadata
-    # --------------------------------------------------------
-    ax_meta = fig.add_subplot(gs[0, :])
-    ax_meta.axis("off")
-    meta_lines = [
-        f"Grid size: {size} x {size}",
-        f"Start: {start}    Goal: {goal}",
-        f"Robot radius: {radius}    Resolution: {resolution}"
-    ]
-    ax_meta.text(0.02, 0.5, "\n".join(meta_lines),
-                 ha="left", va="center", fontsize=12)
-
-    # --------------------------------------------------------
-    # Row 2: Heatmaps
-    # --------------------------------------------------------
-
-    # Custom color map: obstacles black, unvisited white → warm colors
+    # Custom colormap: obstacle = black, unvisited = white, then warm colors by expansion count
     colors = [
-        "black",     # -1 = obstacle
-        "white",     # 0 = unvisited
-        "#ffffcc",   # light yellow
-        "#ffcc66",   # yellow-orange
-        "#ff9933",   # orange
-        "#ff6600",   # warm orange
-        "#cc0000",   # dark red
+        "black",    # -1 => obstacle
+        "white",    # 0  => unvisited
+        "#ffffcc",
+        "#ffdd88",
+        "#ffbb55",
+        "#ff9933",
+        "#ff5500",
+        "#cc0000",
     ]
-    bounds = [-1, 0, 1, 5, 10, 20, 50, 999999]
-    norm = BoundaryNorm(bounds, len(colors))
+    bounds = [-1, 0, 1, 5, 10, 20, 50, 200, 1_000_000]
     cmap = ListedColormap(colors)
+    norm = BoundaryNorm(bounds, len(colors))
+
+    sx, sy = start
+    gx, gy = goal
 
     for idx, pname in enumerate(planners):
-
-        ax = fig.add_subplot(gs[1, idx])
+        r = idx // n_cols
+        c = idx % n_cols
+        ax = axes[r][c]
 
         heat = test["planners"][pname]["heatmap"]
         h, w = heat.shape
 
-        # Copy heatmap and mark obstacles explicitly
-        vis_grid = np.copy(heat)
+        # Build visualization grid: copy expansion counts, overlay obstacles as -1
+        vis_grid = np.array(heat, dtype=float)
         for (ox, oy) in obstacles:
-            vis_grid[oy, ox] = -1
+            if 0 <= ox < w and 0 <= oy < h:
+                vis_grid[oy, ox] = -1
 
-        # Flip vertically so grid (0,0) is bottom-left
-        vis_grid = vis_grid[::-1, :]
+        # IMPORTANT: origin='lower' so row 0 appears at bottom (matches your grid style)
+        im = ax.imshow(vis_grid, origin="lower", cmap=cmap, norm=norm)
 
-        im = ax.imshow(vis_grid, cmap=cmap, norm=norm)
-
-        # Draw grid lines
+        # Grid lines
         ax.set_xticks(np.arange(-0.5, w, 1), minor=True)
         ax.set_yticks(np.arange(-0.5, h, 1), minor=True)
         ax.grid(which="minor", color="gray", linestyle="-", linewidth=0.3)
@@ -87,74 +76,118 @@ def plot_single_test(test: Dict):
         ax.set_xticks([])
         ax.set_yticks([])
 
-        # Overlay PATH
-        path = test["planners"][pname]["path"]
+        # Overlay path if available
+        path = test["planners"][pname].get("path", [])
         if path:
             px = [p[0] for p in path]
-            py = [h - 1 - p[1] for p in path]   # flip y
+            py = [p[1] for p in path]
             ax.plot(px, py, color="cyan", linewidth=2, label="Path")
 
         # Overlay start & goal
-        sx, sy = start
-        gx, gy = goal
+        ax.scatter([sx], [sy], c="green", s=50, marker="o", label="Start")
+        ax.scatter([gx], [gy], c="red",   s=60, marker="x", label="Goal")
 
-        ax.scatter([sx], [h - 1 - sy], c="green", s=50, marker="o", label="Start")
-        ax.scatter([gx], [h - 1 - gy], c="red",   s=60, marker="x", label="Goal")
-
-        ax.set_title(pname, fontsize=11)
+        ax.set_title(pname, fontsize=12)
         ax.legend(fontsize=8, loc="upper right")
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
-    # --------------------------------------------------------
-    # Row 3: Metric bar charts
-    # --------------------------------------------------------
+    # Turn off any unused subplots
+    for idx in range(n_planners, n_rows * n_cols):
+        r = idx // n_cols
+        c = idx % n_cols
+        axes[r][c].axis("off")
 
-    x = np.arange(len(planners))
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
 
-    # Runtime
-    ax_time = fig.add_subplot(gs[2, 0])
-    ax_time.bar(x, runtimes)
-    ax_time.set_xticks(x)
-    ax_time.set_xticklabels(planners, rotation=20, ha="right")
-    ax_time.set_ylabel("Time (s)")
-    ax_time.set_title("Runtime")
-
-    # Expansions
-    ax_exp = fig.add_subplot(gs[2, 1])
-    ax_exp.bar(x, expansions)
-    ax_exp.set_xticks(x)
-    ax_exp.set_xticklabels(planners, rotation=20, ha="right")
-    ax_exp.set_ylabel("Nodes Expanded")
-    ax_exp.set_title("Search Effort")
-
-    # Memory + overlay path length
-    ax_mem = fig.add_subplot(gs[2, 2])
-    ax_mem.bar(x, mem_kb)
-    ax_mem.set_xticks(x)
-    ax_mem.set_xticklabels(planners, rotation=20, ha="right")
-    ax_mem.set_ylabel("Peak Memory (KB)")
-    ax_mem.set_title("Memory Usage")
-
-    for i, (px, py) in enumerate(zip(x, mem_kb)):
-        ax_mem.text(px, py, f"len={path_lens[i]}",
-                    ha="center", va="bottom", fontsize=8)
-
-    # --------------------------------------------------------
-    # Save + show
-    # --------------------------------------------------------
     os.makedirs("plots", exist_ok=True)
     safe_title = title.lower().replace(" ", "_")
-    save_path = os.path.join("plots", f"{safe_title}.png")
-
+    save_path = os.path.join("plots", f"{safe_title}_heatmaps.png")
     fig.savefig(save_path, dpi=150)
     print(f"[plotter] Saved: {save_path}")
-
     plt.show()
 
 
-# -----------------------------------------------------------
-#  Plot all tests
-# -----------------------------------------------------------
+# ================================================================
+# Helper: generic metric bar plot (one figure, all planners)
+# ================================================================
+def _plot_metric_for_test(test: Dict, metric_key: str, title_suffix: str, ylabel: str, fmt: str = ".3f"):
+    """
+    metric_key: 'runtime', 'expansions', 'path_len', ...
+    """
+    title    = test["title"]
+    planners = list(test["planners"].keys())
+
+    values = [test["planners"][p][metric_key] for p in planners]
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    fig.suptitle(f"{title} – {title_suffix}", fontsize=14, fontweight="bold")
+
+    x = np.arange(len(planners))
+    ax.bar(x, values)
+    ax.set_xticks(x)
+    ax.set_xticklabels(planners, rotation=20, ha="right")
+    ax.set_ylabel(ylabel)
+
+    # Label bars with numeric values
+    for xi, v in zip(x, values):
+        if isinstance(v, (int, np.integer)):
+            label = f"{v}"
+        else:
+            label = format(v, fmt)
+        ax.text(xi, v, label, ha="center", va="bottom", fontsize=9)
+
+    ax.grid(axis="y", linestyle="--", alpha=0.4)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+
+    os.makedirs("plots", exist_ok=True)
+    safe_title = title.lower().replace(" ", "_")
+    metric_name = metric_key.lower()
+    save_path = os.path.join("plots", f"{safe_title}_{metric_name}.png")
+    fig.savefig(save_path, dpi=150)
+    print(f"[plotter] Saved: {save_path}")
+    plt.show()
+
+
+# ================================================================
+# Public API: plot all tests produced by Comparator
+# ================================================================
 def plot_all_tests(test_runs: List[Dict]):
+    """
+    test_runs: list of test dicts from Comparator.run_all_tests()
+
+    For each test (e.g. "Small 10x10"):
+      1) One figure: heatmaps of all planners
+      2) One figure: runtime bar chart (all planners)
+      3) One figure: expansions bar chart (all planners)
+      4) One figure: path length bar chart (all planners)
+    """
     for test in test_runs:
-        plot_single_test(test)
+        # a) Heatmaps (all planners)
+        _plot_heatmaps_for_test(test)
+
+        # b) Runtime
+        _plot_metric_for_test(
+            test,
+            metric_key="runtime",
+            title_suffix="Runtime per Planner",
+            ylabel="Time (s)",
+            fmt=".4f",
+        )
+
+        # c) Expansions
+        _plot_metric_for_test(
+            test,
+            metric_key="expansions",
+            title_suffix="Expanded Nodes per Planner",
+            ylabel="Nodes expanded",
+            fmt=".0f",
+        )
+
+        # d) Path length
+        _plot_metric_for_test(
+            test,
+            metric_key="path_len",
+            title_suffix="Path Length per Planner",
+            ylabel="Path length (steps)",
+            fmt=".0f",
+        )

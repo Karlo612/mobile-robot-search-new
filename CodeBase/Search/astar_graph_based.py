@@ -17,7 +17,9 @@ class AStarPlanner_graphbased(Planner):
     def __init__(self, grid_map, motion_model="8n", visualizer=None):
         super().__init__(grid_map, motion_model, visualizer)
         self.res = grid_map.resolution
-        self.expanded_count = 0     # this is to make comparisn only
+        # this is to make comparisn only
+        self.expanded_count = 0    
+        self.expansion_map = {}
 
     def heuristic(self, a, b):
         x1, y1 = a
@@ -89,8 +91,11 @@ class AStarPlanner_graphbased(Planner):
             current_state, _ = OPEN.popitem()
             current = NODES[current_state]
 
-            # --- count expansion ---
+            #generation of expansion count for report only
             self.expanded_count += 1
+            #generation of heatmap counter  for report only
+            x, y = current_state
+            self.expansion_map[(x, y)] = self.expansion_map.get((x, y), 0) + 1
 
             # Print f-cost for debug in navigation mode only.
             if self.visualizer:

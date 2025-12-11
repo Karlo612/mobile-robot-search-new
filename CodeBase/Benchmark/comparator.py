@@ -18,10 +18,10 @@ from CodeBase.Benchmark.plotter import plot_all_tests
 # ---------------------------------------------------------
 PLANNERS = {
     "A* Graph": AStarPlanner_graphbased,
-    #"A* Tree":  AStarPlanner_treebased,
+    "A* Tree":  AStarPlanner_treebased,
     "BFS Graph": BFSPlanner_graphbased,
-    "DFS Graph": DFSPlanner_graphbased
-    #"BFS Tree":  BFSPlanner_treesearch,
+    "BFS Tree":  BFSPlanner_treesearch,
+    "DFS Graph": DFSPlanner_graphbased,
     # "DFS":      DFSPlanner,
 }
 
@@ -50,8 +50,8 @@ class Comparator:
 
         tests = [
             ("Small 10x10", 10),
-            ("Medium 50x50", 50),
-            ("Large 100x100", 100),
+            #("Medium 50x50", 50),
+            # ("Large 100x100", 100),
         ]
 
         for title, size in tests:

@@ -10,6 +10,7 @@ class AStarPlanner_treebased(Planner):
         self.res = grid_map.resolution
         self.counter = 0   # unique visit-id counter. this is needed to track parents as the tree base search in grid can go in loop
         self.expanded_count = 0 # needed for comparisn bechmark mode only
+        self.expansion_map = {}
 
     # ----------------------------------------
     # Heuristic
@@ -84,7 +85,11 @@ class AStarPlanner_treebased(Planner):
 
             f, g, vid, current = heapq.heappop(OPEN)
             cx, cy = current
+
+            #generation of expansion count for report only
             self.expanded_count += 1
+            #generation of heatmap counter  for report only
+            self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             # Debug print
             if vis:

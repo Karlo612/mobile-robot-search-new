@@ -61,8 +61,11 @@ class BFSPlanner_graphbased(Planner):
         while open_queue:
 
             current = open_queue.popleft()
-            cx, cy = current
+            cx, cy = current      
+
+            #generation of expansion count for report only
             self.expanded_count += 1
+            #generation of heatmap counter  for report only
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             closed.add(current)
@@ -172,7 +175,10 @@ class BFSPlanner_treesearch(Planner):
             (cur, vid) = queue.popleft()
             cx, cy = cur
 
+            #generation of expansion count for report only
             self.expanded_count += 1
+            #generation of heatmap counter  for report only
+            self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             # Debug print
             if vis:
