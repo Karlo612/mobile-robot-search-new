@@ -15,7 +15,6 @@ class ObstacleInflator:
         self.BLOCKED = 1
         self.obstacles = None
 
-
     def distance(self,obs_x,obs_y,wx,wy):
         return math.sqrt((obs_x-wx)**2+(obs_y-wy)**2)
 
@@ -24,10 +23,6 @@ class ObstacleInflator:
         self.grid_map = grid_map
         self.world_map = world_map
         self.obstacles = obstacles
-        obstacle_radius = grid_map.resolution / 2.0
-
-        self.grid_map.init_inflation()
-        
 
         for gy in range(grid_map.height):
             for gx in range(grid_map.width):
@@ -42,7 +37,7 @@ class ObstacleInflator:
                     obs_wx, obs_wy = self.world_map.grid_to_world(obstacle.gx, obstacle.gy)
                     # distance between cell center and obstacle center
                     ds = self.distance(obs_wx, obs_wy, wx, wy)
-                    if ds < self.robot_radius + obstacle_radius:
+                    if ds < self.robot_radius:
                         self.grid_map.mark_inflated(gx, gy)
                         break
 

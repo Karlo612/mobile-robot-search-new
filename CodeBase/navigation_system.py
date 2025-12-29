@@ -1,158 +1,188 @@
-# navigation_system.py
-from .Environment.map_loader import MapLoader
-from .Environment.grid_map import GridMap
-from .Environment.inflator import ObstacleInflator
-from .Environment.mobile_robot import MobileRobot
-from .Environment.world_map import WorldMap
-from .Search.astar_graph_based import AStarPlanner_graphbased
-from .Search.astar_tree_based import AStarPlanner_treebased
-from .Search.bfs import BFSPlanner_graphbased
-from .Search.bfs import BFSPlanner_treesearch
-from .Search.dfs import DFSPlanner_graphbased
-from .Visualization.visualizer import Visualizer
+# CodeBase/navigation_system.py
+
+from CodeBase.Environment.inflator import ObstacleInflator
+
+from CodeBase.Search.astar_graph_based import AStarPlanner_graphbased
+from CodeBase.Search.astar_tree_based import AStarPlanner_treebased
+from CodeBase.Search.bfs import BFSPlanner_graphbased, BFSPlanner_treesearch
+from CodeBase.Search.dfs_graph_based import DFSPlanner_graphbased
+from CodeBase.Search.dfs_tree_based import DFSPlanner_treebased
+
 
 class NavigationSystem:
+    """
+    NavigationSystem is an EXECUTION ENGINE.
 
-    def __init__(self, config):
+    It assumes the environment (grid, robot, obstacles, origin, resolution)
+    is already built and provided via env_data.
 
-        self.config = config
+    It is GUI-only and comparison-ready.
+    """
 
-        # reading Map onfig
-        self.map_path = config["map_file"]
-        self.grid_resolution = config["resolution"]
-        self.grid_origin = config["origin"]
+    def __init__(self, env_data, exec_config, visualizer=None):
+        """
+        env_data:
+            {
+                "grid_map": GridMap,
+                "world_map": WorldMap,
+                "robot": MobileRobot,
+                "obstacles": List[Obstacle]
+            }
 
-        # reading Robot config
-        self.robot_radius = config["robot_radius"]
+        exec_config:
+            {
+                "planner": "Astar" | "BFS" | "DFS",
+                "motion": "4n" | "8n",
+                "use_tree_search": bool,
+                "visualize_search": bool,
+                "navigation_mode": "single" | "comparison"
+            }
 
-        # reading Start/Goal in GRID coordinates
-        self.start_grid = config["start_grid"]
-        self.goal_grid = config["goal_grid"]
+        visualizer:
+            EmbeddedVisualizer or None
+        """
 
-        # reading Planner & visualization settings
-        self.motion_type = config.get("motion", "8n")
-        self.search_type = config["planner"]
-        self.visualize_search = config["visualize_search"]
-        self.use_tree_search = config.get("use_tree_search", False)
-                
-    def check_robot_positions(self, robot, grid_map):
+        self.env = env_data
+        self.cfg = exec_config
+        self.vis = visualizer
+
+        # execution settings
+        self.planner_name = exec_config.get("planner", "Astar").upper()
+        self.motion = exec_config.get("motion", "8n")
+        self.use_tree = exec_config.get("use_tree_search", False)
+        self.visualize = exec_config.get("visualize_search", True)
+        self.mode = exec_config.get("navigation_mode", "single")
+
+    # --------------------------------------------------
+    # Validation
+    # --------------------------------------------------
+    def _validate_start_goal(self, grid_map, robot):
+        print("[NAV] Validating start:", robot.sx, robot.sy)
         sx, sy = robot.sx, robot.sy
-        gx, gy = robot.gx, robot.gy
 
-        # start cell
-        if grid_map.is_obstacle(sx, sy) or grid_map.is_inflated(sx, sy):
-            print("Start cell is blocked for the robot radius!")
-            return False
+        if grid_map.is_obstacle(sx, sy):
+            raise RuntimeError("Start is on an obstacle")
 
-        # goal cell
-        #if grid_map.is_obstacle(gx, gy) or grid_map.is_inflated(gx, gy):
-            #print("ERROR: Goal cell is blocked for the robot radius!")
-            #return False
+        if grid_map.is_inflated(sx, sy):
+            raise RuntimeError("Start is blocked after inflation")
 
-        return True
+    # --------------------------------------------------
+    # Planner factory
+    # --------------------------------------------------
+    def _create_planner(self, grid_map):
+        print(
+            "[NAV] Creating planner:",
+            self.planner_name,
+            "| motion =", self.motion,
+            "| tree =", self.use_tree
+        )
+        if self.planner_name == "ASTAR":
+            if self.use_tree:
+                return AStarPlanner_treebased(
+                    grid_map, motion_model=self.motion, visualizer=self.vis
+                )
+            return AStarPlanner_graphbased(
+                grid_map, motion_model=self.motion, visualizer=self.vis
+            )
 
-    def setup_environment(self):
+        elif self.planner_name == "BFS":
+            if self.use_tree:
+                return BFSPlanner_treesearch(
+                    grid_map, motion_model=self.motion, visualizer=self.vis
+                )
+            return BFSPlanner_graphbased(
+                grid_map, motion_model=self.motion, visualizer=self.vis
+            )
 
-        #Create MapLoder
-        map_loader = MapLoader()
+        elif self.planner_name == "DFS":
+            if self.use_tree:
+                return DFSPlanner_treebased(
+                grid_map, motion_model=self.motion, visualizer=self.vis
+                )
+            return DFSPlanner_graphbased(
+                grid_map, motion_model=self.motion, visualizer=self.vis    
+            )
 
-        #Load map (GridMap + obstacle list)
-        grid_array, obstacles = map_loader.load(self.map_path)
+        else:
+            raise NotImplementedError(
+                f"Planner '{self.planner_name}' not supported"
+            )
 
-        #Create gridMap using resolution from the grid_array
-        grid_map = GridMap(grid_array, self.grid_resolution)     
+    # --------------------------------------------------
+    # MAIN EXECUTION
+    # --------------------------------------------------
+    def run(self):
+        print("[NAV] Entering NavigationSystem.run()")
 
-        #Create worldmap - real coordinate 
-        world_map = WorldMap(self.grid_origin, self.grid_resolution)   
+        grid_map = self.env["grid_map"]
+        world_map = self.env["world_map"]
+        robot = self.env["robot"]
+        obstacles = self.env["obstacles"]
 
-        #Create Robot object
-        robot= MobileRobot(self.robot_radius,self.start_grid,self.goal_grid)       
+        # --------------------------------------------------
+        # 1. Inflate obstacles (ONCE per run)
+        # --------------------------------------------------
+        #inflator = ObstacleInflator(robot.radius)
+        #inflator.inflate(grid_map, world_map, obstacles)
 
-        robot.attach_maps(grid_map, world_map)
+        inflated_count = sum(
+            grid_map.is_inflated(x, y)
+            for y in range(grid_map.height)
+            for x in range(grid_map.width)
+        )
 
-        return grid_map, world_map, robot , obstacles
-      
+        print("[NAV] Inflated cells:", inflated_count)
 
-    def execute_planner(self, planner, robot, vis):
+        # --------------------------------------------------
+        # 2. Validate start / goal
+        # --------------------------------------------------
+        self._validate_start_goal(grid_map, robot)
+
         start = (robot.sx, robot.sy)
         goal = (robot.gx, robot.gy)
 
-        # Run planner
+        # --------------------------------------------------
+        # 3. Visualization setup
+        # --------------------------------------------------
+        if self.vis and self.visualize:
+            self.vis.setup()
+            self.vis.draw_start_goal(start, goal)
+            self.vis.update()
+
+        # --------------------------------------------------
+        # 4. Planner creation
+        # --------------------------------------------------
+        planner = self._create_planner(grid_map)
+
+        # --------------------------------------------------
+        # 5. Run planner
+        # --------------------------------------------------
         path = planner.plan(start, goal)
 
-        # Failure case
+        if path:
+            print("[NAV] Path length:", len(path)-1)
+        else:
+            print("[NAV] No path found")
+
         if not path:
-            print("No path found.")
-            if vis:
-                vis.show()
+            print("[NavigationSystem] No path found")
             return None
 
-        # Draw final path
-        if vis:
-            vis.draw_final_path(path)
-            vis.update()
-            vis.show()
+        # --------------------------------------------------
+        # 6. Final visualization + robot pose
+        # --------------------------------------------------
+        if self.vis and self.visualize:
+            self.vis.draw_final_path(path)
+            self.vis.update()
+
+        gx, gy = path[-1]
+        robot.x, robot.y = world_map.grid_to_world(gx, gy)
+
+ 
+        print(
+            "[NAV] Final world pose:",
+            (robot.x, robot.y),
+            "| resolution =", world_map.resolution
+        )
 
         return path
-
-
-    def run(self):
-
-        # Setup environment (load map, obstacles, robot)
-        grid_map, world_map, robot, obstacles = self.setup_environment()
-
-        #Inflate obstacles
-        inflator = ObstacleInflator(robot.radius)
-        inflator.inflate(grid_map,world_map,obstacles)
-
-        if not self.check_robot_positions(robot, grid_map):
-            return
-
-        # Initialize visualization
-        vis = None
-        if self.visualize_search:
-            vis = Visualizer(grid_map,cell_size=self.grid_resolution)
-            vis.setup()
-            vis.draw_start_goal(
-                start=(robot.sx, robot.sy),
-                goal=(robot.gx, robot.gy),
-            )
-
-        #setup planner
-        # Initialize planner based on search_type
-        planner_name = self.search_type.upper()
-        if planner_name == "ASTAR":
-            if self.use_tree_search:
-                print("Running A* (TREE-BASED)")
-                planner = AStarPlanner_treebased(grid_map,motion_model=self.motion_type,visualizer=vis)
-            else:
-                print("Running A* (GRAPH-BASED)")
-                planner = AStarPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis)
-
-            path = self.execute_planner(planner, robot, vis)
-
-        elif planner_name == "BFS":  
-            if self.use_tree_search:
-                print("Running BFS (TREE-BASED)")
-                planner = BFSPlanner_treesearch(grid_map, motion_model=self.motion_type, visualizer=vis)
-            else:
-                print("Running BFS (GRAPH-BASED)")
-                planner = BFSPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis) 
-            path = self.execute_planner(planner, robot, vis)
-
-        elif planner_name == "DFS":  #condition for DFS
-            if self.use_tree_search:
-                print("not ready yet")
-                #planner = BFSPlanner_treesearch(grid_map, motion_model=self.motion_type, visualizer=vis)
-            else:
-                print("Running DFS (GRAPH-BASED)")
-                planner = DFSPlanner_graphbased(grid_map,motion_model=self.motion_type,visualizer=vis) 
-            path = self.execute_planner(planner, robot, vis)
-        else:
-            raise NotImplementedError(f"Planner '{self.search_type}' not implemented yet.")
-        
-        if path:
-            gx, gy = path[-1]
-            robot.x, robot.y = world_map.grid_to_world(gx, gy)
-
-

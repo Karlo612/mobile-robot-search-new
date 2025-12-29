@@ -54,6 +54,10 @@ class AStarPlanner_graphbased(Planner):
             if self.grid_map.is_obstacle(nx, ny):
                 continue
             if self.grid_map.is_inflated(nx, ny):
+                print(
+                    f"[NEIGHBOR BLOCK] ({nx},{ny}) is INFLATED | "
+                    f"from ({gx},{gy})"
+                )
                 if self.visualizer:
                     self.visualizer.draw_inflated(nx, ny)
                 continue

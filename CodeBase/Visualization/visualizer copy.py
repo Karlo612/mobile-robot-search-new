@@ -64,31 +64,15 @@ class Visualizer:
                 self._draw_cell(gx, gy, color)
 
 
-
     def draw_start_goal(self, start, goal):
-        s = self.cell_size
-
         sx, sy = start
         gx, gy = goal
 
-        # START — red outlined cell
-        self.ax.add_patch(Rectangle(
-            (sx * s, sy * s),
-            s, s,
-            fill=False,
-            edgecolor="red",
-            linewidth=2
-        ))
+        cx, cy = self._to_center(sx, sy)
+        self.ax.scatter(cx, cy, s=300, c="red", marker="s")
 
-        # GOAL — green outlined cell
-        self.ax.add_patch(Rectangle(
-            (gx * s, gy * s),
-            s, s,
-            fill=False,
-            edgecolor="green",
-            linewidth=2
-        ))
-
+        cx, cy = self._to_center(gx, gy)
+        self.ax.scatter(cx, cy, s=300, c="green", marker="s")
 
     def draw_explored(self, gx, gy):
         cx, cy = self._to_center(gx, gy)
@@ -139,5 +123,5 @@ class Visualizer:
         plt.pause(pause)
 
     def show(self):
-        #plt.show()
-        plt.draw()
+        plt.show()
+        #plt.draw()

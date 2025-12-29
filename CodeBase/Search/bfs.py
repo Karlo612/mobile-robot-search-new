@@ -36,7 +36,8 @@ class BFSPlanner_graphbased(Planner):
                 
                 if self.visualizer:
                     self.visualizer.draw_inflated(nx, ny)
-                continue
+                continue         
+
             yield nx, ny
 
     def plan(self, start, goal):
@@ -153,6 +154,7 @@ class BFSPlanner_treesearch(Planner):
                 if self.visualizer:
                     self.visualizer.draw_inflated(nx, ny)
                 continue
+
             yield nx, ny
 
     def plan(self, start, goal):

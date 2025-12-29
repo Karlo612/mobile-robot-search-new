@@ -13,11 +13,10 @@ class GridMap:
         self.resolution = resolution
         self.grid = grid_array
 
-        # Lazily created when inflation is needed
-        self.inflated_grid = None
-
-    def init_inflation(self):
-        self.inflated_grid = np.zeros((self.height, self.width), dtype=bool)
+        self.inflated_grid = [
+            [False for _ in range(self.width)]
+            for _ in range(self.height)
+        ]
 
     def set_cell(self, gx, gy, value):
         self.grid[gy][gx] = value
@@ -38,8 +37,6 @@ class GridMap:
         return True if self.grid[gy][gx]==1 else False
     
     def is_inflated(self, gx, gy):
-        if self.inflated_grid is None:
-            return False
         return self.inflated_grid[gy][gx]
     
     
