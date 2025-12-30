@@ -9,7 +9,7 @@
   
   "motion": "8n",
   "planner": "Astar",
-  "visualize_search": true,
+  "visualize_search": false,
   "use_tree_search": false,
   "mode": "nav" 
 }

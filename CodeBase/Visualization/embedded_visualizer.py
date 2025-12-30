@@ -1,4 +1,10 @@
 import time
+# Set backend before importing pyplot to avoid compatibility issues
+import matplotlib
+try:
+    matplotlib.use('TkAgg')
+except Exception:
+    pass  # Backend might already be set
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -10,11 +16,30 @@ class EmbeddedVisualizer:
         self.grid_map = grid_map
         self.parent = parent_frame
 
-        self.fig, self.ax = plt.subplots(figsize=(6, 6))
+        try:
+            self.fig, self.ax = plt.subplots(figsize=(6, 6))
+        except Exception as e:
+            # Fallback if TkAgg backend has compatibility issues
+            error_msg = str(e)
+            if "macOS" in error_msg or "2601" in error_msg:
+                raise RuntimeError(
+                    "GUI visualization requires macOS compatibility. "
+                    "The TkAgg backend is not compatible with your system. "
+                    "Please try:\n"
+                    "1. Updating your Python version to 3.10+\n"
+                    "2. Using a different Python distribution (e.g., Homebrew Python)\n"
+                    "3. Running without visualization (set visualize_search: false in config)"
+                ) from e
+            raise
+        
         self.ax.set_aspect("equal")
 
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
-        self.canvas.get_tk_widget().pack(fill="both", expand=True)
+        try:
+            self.canvas = FigureCanvasTkAgg(self.fig, master=self.parent)
+            self.canvas.get_tk_widget().pack(fill="both", expand=True)
+        except Exception as e:
+            plt.close(self.fig)
+            raise RuntimeError(f"Failed to create GUI canvas: {e}") from e
 
         self._grid_artist = None
 

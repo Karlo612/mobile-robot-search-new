@@ -3,6 +3,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+# Set matplotlib backend before importing pyplot
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 from CodeBase.navigation_system import NavigationSystem
