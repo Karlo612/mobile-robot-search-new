@@ -335,7 +335,28 @@ class ExperimentGUI(tk.Toplevel):
         try:
             motion = self.motion.get()
 
-            total_jobs = sum(len(envs) for envs in self.maps.values()) * len(planner_defs)
+            # Separate planners by tree/graph
+            tree_planners = [(name, True) for name, tree in planner_defs if tree]
+            graph_planners = [(name, False) for name, tree in planner_defs if not tree]
+            
+            # Reorder tree planners: A* → BFS → DFS
+            def sort_key(planner_tuple):
+                name, _ = planner_tuple
+                if name == "Astar":
+                    return 0
+                elif name == "BFS":
+                    return 1
+                elif name == "DFS":
+                    return 2
+                else:
+                    return 3
+            
+            tree_planners_sorted = sorted(tree_planners, key=sort_key)
+            
+            # Combine: tree-based first (in order), then graph-based
+            ordered_planner_defs = tree_planners_sorted + graph_planners
+
+            total_jobs = sum(len(envs) for envs in self.maps.values()) * len(ordered_planner_defs)
             self.after(0, lambda: self._init_progress(total_jobs))
 
             job = 0
@@ -346,7 +367,7 @@ class ExperimentGUI(tk.Toplevel):
                     # stable map id (matches generate_maps)
                     map_id = env_data["meta"]["map_id"]
 
-                    for planner_name, use_tree_search in planner_defs:
+                    for planner_name, use_tree_search in ordered_planner_defs:
                         exec_cfg = {
                             "planner": planner_name,
                             "motion": motion,
@@ -412,12 +433,16 @@ class ExperimentGUI(tk.Toplevel):
                         job += 1
                         self.after(0, lambda v=job: self._update_progress(v))
 
+                        status = ""
+                        if result.get('exceeded_expansion_limit', False):
+                            status = " [STOPPED: expansion limit exceeded]"
+                        
                         self.log_msg_async(
                             f"{size_name} map {mid} | {planner_name} "
                             f"{'Tree' if use_tree_search else 'Graph'} | "
                             f"time={result.get('runtime_ms', -1):.1f}ms "
                             f"exp={result.get('expanded_nodes', 'NA')} "
-                            f"path={result.get('path_len', 'NA')}"
+                            f"path={result.get('path_len', 'NA')}{status}"
                         )
 
             self.log_msg_async("[DONE] Experiment complete")

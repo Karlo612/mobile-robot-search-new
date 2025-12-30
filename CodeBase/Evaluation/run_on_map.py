@@ -55,6 +55,11 @@ def run_planner_on_map(env_data, exec_config):
     found = path is not None
     path_len = len(path) if found else 0
 
+    # Check if expansion limit was exceeded
+    exceeded_expansion_limit = getattr(planner, "exceeded_expansion_limit", False)
+    if exceeded_expansion_limit:
+        found = False
+        path_len = 0
     
     if found and hasattr(planner, "cost"):
         path_cost = sum(
@@ -79,4 +84,5 @@ def run_planner_on_map(env_data, exec_config):
         "memory_kb": peak / 1024.0,
 
         "expansion_map": getattr(planner, "expansion_map", {}),
+        "exceeded_expansion_limit": exceeded_expansion_limit,
     }

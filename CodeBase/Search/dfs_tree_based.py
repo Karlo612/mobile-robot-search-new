@@ -19,6 +19,7 @@ class DFSPlanner_treebased(Planner):
         super().__init__(grid_map, motion_model, visualizer)
         self.expanded_count = 0
         self.expansion_map = {}
+        self.exceeded_expansion_limit = False
 
     def get_neighbors(self, gx, gy):
         if self.motion_model == "4n":
@@ -108,6 +109,13 @@ class DFSPlanner_treebased(Planner):
             # expansions counters
             self.expanded_count += 1
             self.expansion_map[v] = self.expansion_map.get(v, 0) + 1
+
+            # Check expansion limit to prevent infinite loops
+            grid_size = self.grid_map.width * self.grid_map.height
+            if self.expanded_count > grid_size:
+                self.exceeded_expansion_limit = True
+                print(f"[DFS-TREE] Stopped: expanded_count ({self.expanded_count}) exceeds grid size ({grid_size})")
+                return None
 
             # visualization: explored + partial path
             if vis:

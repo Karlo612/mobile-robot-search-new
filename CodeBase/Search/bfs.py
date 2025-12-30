@@ -134,6 +134,7 @@ class BFSPlanner_treesearch(Planner):
         self.counter = 0
         self.expanded_count = 0
         self.expansion_map = {}
+        self.exceeded_expansion_limit = False
 
     def get_neighbors(self, gx, gy):
         if self.motion_model == "4n":
@@ -181,6 +182,13 @@ class BFSPlanner_treesearch(Planner):
             self.expanded_count += 1
             #generation of heatmap counter  for report only
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
+
+            # Check expansion limit to prevent infinite loops
+            grid_size = self.grid_map.width * self.grid_map.height
+            if self.expanded_count > grid_size:
+                self.exceeded_expansion_limit = True
+                print(f"[BFS-TREE] Stopped: expanded_count ({self.expanded_count}) exceeds grid size ({grid_size})")
+                return None
 
             # Debug print
             if vis:
