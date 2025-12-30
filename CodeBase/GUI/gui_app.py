@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from CodeBase.navigation_system import NavigationSystem
 from CodeBase.Util.random_grid_factory import create_random_grid_environment
 from CodeBase.Visualization.embedded_visualizer import EmbeddedVisualizer
+from CodeBase.GUI.experiment_gui import ExperimentGUI
+
 
 
 class SearchGUI(tk.Tk):
@@ -15,7 +17,10 @@ class SearchGUI(tk.Tk):
         super().__init__()
 
         self.title("Search Visualization Control")
-        self.geometry("1100x650")
+        w = self.winfo_screenwidth()
+        h = self.winfo_screenheight()
+        self.geometry(f"{w}x{h}")
+
         self.resizable(True, True)
 
         self.env_data = None
@@ -32,8 +37,17 @@ class SearchGUI(tk.Tk):
     # Clean shutdown
     # --------------------------------------------------
     def on_close(self):
-        plt.close("all")
+        # Schedule matplotlib cleanup on the Tk main thread
+        self.after(0, self._safe_close)
+
+    def _safe_close(self):
+        try:
+            import matplotlib.pyplot as plt
+            plt.close("all")
+        except Exception:
+            pass
         self.destroy()
+
 
     # --------------------------------------------------
     # Mark environment dirty
@@ -147,6 +161,15 @@ class SearchGUI(tk.Tk):
         )
         self.run_button.pack(**pad)
 
+        ttk.Separator(control_frame).pack(fill="x", pady=10)
+
+        ttk.Button(
+            control_frame,
+            text="Run Experiments",
+            command=self.open_experiment_gui
+        ).pack(**pad)
+
+
         # ---------------- RIGHT PANEL (visualization) ----------------
         self.vis_frame = ttk.Frame(container)
         self.vis_frame.pack(side="right", fill="both", expand=True)
@@ -167,12 +190,16 @@ class SearchGUI(tk.Tk):
             robot_radius = float(self.robot_radius.get())
             resolution = float(self.grid_resolution.get())
 
-            grid_map, world_map, robot, obstacles = create_random_grid_environment(
-                grid_size,
-                obstacle_ratio,
-                robot_radius,
-                resolution=resolution
-            )
+            try:
+                grid_map, world_map, robot, obstacles = create_random_grid_environment(
+                    grid_size,
+                    obstacle_ratio,
+                    robot_radius,
+                    resolution=resolution
+                )
+            except Exception as e:
+                messagebox.showerror("Grid Generation Failed", str(e))
+                return
 
             print(
                 "[GUI ENV]",
@@ -273,6 +300,8 @@ class SearchGUI(tk.Tk):
         except Exception as e:
             messagebox.showerror("Execution Error", str(e))
 
+    def open_experiment_gui(self):
+        ExperimentGUI(self)
 
 # --------------------------------------------------
 # Entry point

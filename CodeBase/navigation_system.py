@@ -41,7 +41,7 @@ class NavigationSystem:
         visualizer:
             EmbeddedVisualizer or None
         """
-
+        self.planner = None
         self.env = env_data
         self.cfg = exec_config
         self.vis = visualizer
@@ -136,10 +136,20 @@ class NavigationSystem:
         # --------------------------------------------------
         # 2. Validate start / goal
         # --------------------------------------------------
-        self._validate_start_goal(grid_map, robot)
 
-        start = (robot.sx, robot.sy)
-        goal = (robot.gx, robot.gy)
+        if "start" in self.env and "goal" in self.env:
+            start = self.env["start"]
+            goal  = self.env["goal"]
+
+            # sync robot for GUI consistency
+            robot.sx, robot.sy = start
+            robot.gx, robot.gy = goal
+        else:
+            self._validate_start_goal(grid_map, robot)
+            start = (robot.sx, robot.sy)
+            goal  = (robot.gx, robot.gy)
+
+        print("[NAV] Using start/goal:", start, goal)
 
         # --------------------------------------------------
         # 3. Visualization setup
@@ -153,6 +163,7 @@ class NavigationSystem:
         # 4. Planner creation
         # --------------------------------------------------
         planner = self._create_planner(grid_map)
+        self.planner = planner
 
         # --------------------------------------------------
         # 5. Run planner

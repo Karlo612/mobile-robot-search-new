@@ -43,94 +43,101 @@ def grid_to_obstacles(grid: np.ndarray):
     return obstacles
 
 
-def manhattan(a, b) -> int:
+import random
+
+def manhattan(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def pick_start_goal(grid_map: GridMap, min_dist: int, max_tries: int = 10_000):
-    """
-    Pick start and goal from cells that are:
-      - NOT obstacles
-      - NOT inflated
-    And ensure Manhattan(start, goal) >= min_dist.
-    """
+def pick_start_goal(grid_map, max_tries=5_000):
+    safe_cells = [
+        (x, y)
+        for y in range(grid_map.height)
+        for x in range(grid_map.width)
+        if not grid_map.is_obstacle(x, y)
+        and not grid_map.is_inflated(x, y)
+    ]
 
-    h, w = grid_map.height, grid_map.width
-
-    def pick_free():
-        for _ in range(max_tries):
-            gx = random.randrange(w)
-            gy = random.randrange(h)
-            if (not grid_map.is_obstacle(gx, gy) and
-                not grid_map.is_inflated(gx, gy)):
-                return gx, gy
-        raise RuntimeError("Failed to find free (non-obstacle, non-inflated) cell.")
-
-    start = pick_free()
+    if len(safe_cells) < 2:
+        raise RuntimeError("Not enough safe cells for start/goal")
 
     for _ in range(max_tries):
-        goal = pick_free()
-        if goal != start and manhattan(start, goal) >= min_dist:
-            # print("[PICKED]", start, goal, "dist =", manhattan(start, goal))
+        start, goal = random.sample(safe_cells, 2)
+        if start != goal:
             return start, goal
 
-    raise RuntimeError(
-        f"Failed to find goal far enough from start (min_dist={min_dist}). "
-        f"Try lowering min_dist, robot radius, or obstacle density."
-    )
-
+    raise RuntimeError("Failed to pick distinct start/goal")
 
 def create_random_grid_environment(
     size: int,
     obstacle_ratio: float,
     robot_radius: float,
-    resolution: float = 1.0
+    resolution: float = 1.0,
+    max_retries: int = 5,
 ):
     """
-    Full random environment generator (GUI-ready):
-      1) generate random grid with boundary walls
-      2) create obstacles list
-      3) build GridMap + WorldMap
-      4) attach robot
-      5) inflate obstacles ONCE
-      6) pick start/goal far apart (uses pick_start_goal)
+    Robust random environment generator.
 
-    Returns:
-      grid_map, world_map, robot, obstacles
+    Tries up to `max_retries` times before failing.
     """
-    grid_array = generate_random_grid(size, obstacle_ratio)
 
-    # Create obstacles
-    obstacles = grid_to_obstacles(grid_array)
-    print("[GRID FACTORY] obstacle count =", len(obstacles))
+    last_error = None
 
-    # Create maps
-    grid_map = GridMap(grid_array, resolution=resolution)
-    world_map = WorldMap(origin=(0, 0), resolution=resolution)
+    for attempt in range(1, max_retries + 1):
+        try:
+            print(
+                f"\n[GRID FACTORY CALL attempt {attempt}/{max_retries}]",
+                f"size={size}",
+                f"obstacle_ratio={obstacle_ratio}",
+                f"robot_radius={robot_radius}",
+                f"resolution={resolution}"
+            )
 
-    # Create robot (dummy start/goal first)
-    robot = MobileRobot(robot_radius, (0, 0), (0, 0))
-    robot.attach_maps(grid_map, world_map)
+            grid_array = generate_random_grid(size, obstacle_ratio)
+            obstacles = grid_to_obstacles(grid_array)
 
-    # Inflate ONCE and KEEP it
-    inflator = ObstacleInflator(robot_radius)
-    inflator.inflate(grid_map, world_map, obstacles)
+            grid_map = GridMap(grid_array, resolution=resolution)
+            world_map = WorldMap(origin=(0, 0), resolution=resolution)
 
-    # Debug inflated cells count
-    inflated_count = sum(
-        1
-        for y in range(grid_map.height)
-        for x in range(grid_map.width)
-        if grid_map.is_inflated(x, y)
+            robot = MobileRobot(robot_radius, (0, 0), (0, 0))
+            robot.attach_maps(grid_map, world_map)
+
+            # Inflate once
+            inflator = ObstacleInflator(robot_radius)
+            inflator.inflate(grid_map, world_map, obstacles)
+
+            inflated_count = sum(
+                grid_map.is_inflated(x, y)
+                for y in range(grid_map.height)
+                for x in range(grid_map.width)
+            )
+            print("[GRID FACTORY] inflated cells =", inflated_count)
+
+            # ---- START / GOAL PICK ----
+            start, goal = pick_start_goal(grid_map)
+
+            # HARD GUARANTEE
+            if start == goal:
+                raise RuntimeError("Start equals goal (invalid)")
+
+            robot.sx, robot.sy = start
+            robot.gx, robot.gy = goal
+
+            print(
+                "[GRID FACTORY RESULT]",
+                "robot.radius =", robot.radius,
+                "start =", start,
+                "goal =", goal
+            )
+
+            return grid_map, world_map, robot, obstacles
+
+        except Exception as e:
+            last_error = e
+            print(f"[GRID FACTORY] retry failed: {e}")
+
+    # 🔥 After all retries
+    raise RuntimeError(
+        f"Grid generation failed after {max_retries} retries: {last_error}"
     )
-    print("[GRID FACTORY] inflated cells =", inflated_count)
 
-    # IMPORTANT FIX:
-    # Use pick_start_goal() (your constraint function) instead of random.sample()
-    min_dist = max(5, size // 2)  # scales: 10->5, 50->25, 100->50
-    start, goal = pick_start_goal(grid_map, min_dist=min_dist)
-
-    robot.sx, robot.sy = start
-    robot.gx, robot.gy = goal
-
-    return grid_map, world_map, robot, obstacles

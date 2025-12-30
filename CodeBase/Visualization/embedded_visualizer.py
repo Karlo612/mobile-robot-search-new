@@ -221,7 +221,7 @@ class EmbeddedVisualizer:
     # -------------------------
     # Update / Show
     # -------------------------
-    def update(self, pause=0.05):
+    def update(self, pause=1):
         self.canvas.draw()
         self.canvas.flush_events()
         time.sleep(pause)
