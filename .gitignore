@@ -208,3 +208,6 @@ __marimo__/
 
 #project files
 *.png
+*.csv
+*.npz
+*.Identifier
