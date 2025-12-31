@@ -1022,17 +1022,17 @@ class ExperimentGUI(tk.Toplevel):
         import matplotlib.pyplot as plt
         import numpy as np
         
-        # New intuitive colormap: cool (blue) to warm (red) gradient
-        # This represents exploration intensity from low (cool) to high (warm)
+        # Improved colormap: white for unvisited, then clear gradient from visible color
+        # Free cells stay white, but exploration is immediately visible
         colors = [
             "black",        # -1 => obstacle (keep black for obstacles)
-            "#f0f8ff",      # 0  => unvisited (alice blue - very light blue)
-            "#add8e6",      # 1-5 => light blue (light exploration)
-            "#87ceeb",      # 5-10 => sky blue (moderate exploration)
-            "#00ff00",      # 10-20 => bright green (increasing exploration)
-            "#ffff00",      # 20-50 => yellow (high exploration)
-            "#ff8c00",      # 50-200 => dark orange (very high exploration)
-            "#ff0000",      # 200+ => red (maximum exploration)
+            "#ffffff",      # 0  => unvisited (white - matches free cells)
+            "#b3d9ff",      # 1-5 => light blue (clearly visible, not white)
+            "#66b3ff",      # 5-10 => medium blue (light exploration)
+            "#1a8cff",      # 10-20 => blue (moderate exploration)
+            "#00cc66",      # 20-50 => green (increasing exploration)
+            "#ffcc00",      # 50-200 => yellow/orange (high exploration)
+            "#ff6600",      # 200+ => bright orange-red (maximum exploration)
         ]
         bounds = [-1, 0, 1, 5, 10, 20, 50, 200, 1_000_000]
         cmap = ListedColormap(colors)
