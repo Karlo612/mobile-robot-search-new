@@ -685,6 +685,11 @@ class ExperimentGUI(tk.Toplevel):
         # Add a separator/spacer to ensure navigation frame is visible
         ttk.Separator(plot_controls, orient="vertical").pack(side="left", fill="y", padx=5)
         
+        # Save plot button
+        self.btn_save_plot = ttk.Button(plot_controls, text="Save Plot", 
+                                        command=self._save_current_plot, width=12)
+        self.btn_save_plot.pack(side="left", padx=5)
+        
         # Matplotlib figure
         self.plot_fig = Figure(figsize=(10, 6), dpi=100)
         self.plot_ax = self.plot_fig.add_subplot(111)
@@ -733,6 +738,10 @@ class ExperimentGUI(tk.Toplevel):
         # Create planner label
         df["planner_label"] = df["planner"] + "-" + df["tree"].map({True: "Tree", False: "Graph"})
         
+        # Ensure axis exists (it may have been removed by other views that call plot_fig.clear())
+        if not self.plot_fig.get_axes() or self.plot_ax not in self.plot_fig.get_axes():
+            self.plot_ax = self.plot_fig.add_subplot(111)
+        
         self.plot_ax.clear()
         
         if view_type == "Box Plot":
@@ -744,8 +753,8 @@ class ExperimentGUI(tk.Toplevel):
             
             bp = self.plot_ax.boxplot(data_by_planner, labels=labels, patch_artist=True)
             
-            # Use log scale for y-axis if metric is runtime_ms or path_len
-            if metric in ["runtime_ms", "path_len"]:
+            # Use log scale for y-axis if metric is runtime_ms, path_len, expanded_nodes, or memory_kb
+            if metric in ["runtime_ms", "path_len", "expanded_nodes", "memory_kb"]:
                 # Filter out zero or negative values for log scale
                 all_positive = all(len(data) > 0 and np.all(data > 0) for data in data_by_planner)
                 if all_positive:
@@ -948,10 +957,14 @@ class ExperimentGUI(tk.Toplevel):
                     patch.set_facecolor(color)
                 
                 # Use log scale for y-axis if:
-                # - metric is runtime_ms and map size is medium or large
+                # - metric is runtime_ms for all map sizes (small, medium, large)
                 # - metric is path_len and map size is large
-                if (metric == "runtime_ms" and map_size in ["medium", "large"]) or \
-                   (metric == "path_len" and map_size == "large"):
+                # - metric is expanded_nodes for all map sizes (small, medium, large)
+                # - metric is memory_kb for all map sizes (small, medium, large)
+                if (metric == "runtime_ms" and map_size in ["small", "medium", "large"]) or \
+                   (metric == "path_len" and map_size == "large") or \
+                   (metric == "expanded_nodes" and map_size in ["small", "medium", "large"]) or \
+                   (metric == "memory_kb" and map_size in ["small", "medium", "large"]):
                     # Check if we have positive values for log scale
                     all_positive = all(len(data) > 0 and np.all(data > 0) for data in data_by_planner)
                     if all_positive:
@@ -1275,6 +1288,56 @@ class ExperimentGUI(tk.Toplevel):
             cbar.set_label('Expansion Count', rotation=270, labelpad=15)
         
         self.plot_canvas.draw()
+    
+    def _save_current_plot(self):
+        """Save the current plot with a descriptive filename"""
+        if not self.results:
+            messagebox.showwarning("No Data", "No results available to save.")
+            return
+        
+        from tkinter import filedialog
+        import pandas as pd
+        
+        # Get current view and metric
+        view_type = self.plot_view.get()
+        metric = self.plot_metric.get()
+        
+        # Determine tree/graph from results
+        df = pd.DataFrame(self.results)
+        if "tree" in df.columns:
+            tree_values = df["tree"].unique()
+            if len(tree_values) == 1:
+                # All results use the same setting
+                search_type = "tree" if tree_values[0] else "graph"
+            else:
+                # Mixed tree/graph results
+                search_type = "mixed"
+        else:
+            search_type = "unknown"
+        
+        # Generate descriptive filename
+        # Replace spaces and special characters for filename safety
+        view_safe = view_type.replace(" ", "_").lower()
+        metric_safe = metric.replace("_", "_")
+        
+        # Filename without timestamp
+        default_filename = f"{view_safe}_{metric_safe}_{search_type}.png"
+        
+        # Ask user for save location
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"), ("PDF files", "*.pdf"), ("All files", "*.*")],
+            initialfile=default_filename,
+            title="Save Plot"
+        )
+        
+        if filepath:
+            try:
+                # Save the figure
+                self.plot_fig.savefig(filepath, dpi=150, bbox_inches='tight')
+                messagebox.showinfo("Success", f"Plot saved to:\n{filepath}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to save plot:\n{str(e)}")
     
     # --------------------------------------------------
     # Statistics Panel
