@@ -13,7 +13,6 @@ from tkinter import ttk, messagebox
 # Set matplotlib backend before importing pyplot
 import matplotlib
 matplotlib.use('TkAgg')
-import matplotlib.pyplot as plt
 
 from CodeBase.navigation_system import NavigationSystem
 from CodeBase.Util.random_grid_factory import create_random_grid_environment
@@ -48,7 +47,6 @@ class SearchGUI(tk.Tk):
         self.resizable(True, True)
 
         self.env_data = None
-        self.current_config = None
         self.vis = None
 
         # Environment dirty flag: True when parameters change, requires regeneration

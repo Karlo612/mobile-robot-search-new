@@ -9,9 +9,6 @@ heatmaps and paths.
 """
 
 import tkinter as tk
-import os
-from datetime import datetime
-
 from tkinter import ttk, messagebox
 import threading
 import numpy as np
