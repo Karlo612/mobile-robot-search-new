@@ -29,7 +29,7 @@ class DFSPlanner_graphbased(Planner):
       and is more efficient for graph search problems.
     """
 
-    def __init__(self, grid_map, motion_model="8n", visualizer=None):
+    def __init__(self, grid_map, motion_model="8n", visualizer=None, debug=False):
         """
         Initialize the graph-based DFS planner.
         
@@ -37,10 +37,12 @@ class DFSPlanner_graphbased(Planner):
             grid_map: The grid map representing the environment
             motion_model: "4n" for 4-connected or "8n" for 8-connected movement
             visualizer: Optional visualizer for displaying search progress
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         self.expanded_count = 0  # Total number of nodes expanded during search
         self.expansion_map = {}  # Tracks how many times each state was expanded
+        self.debug = debug
 
     # ========================================================================
     # Neighbor Generation - Successor Function
@@ -133,13 +135,15 @@ class DFSPlanner_graphbased(Planner):
         # 1: node ← with s as state
         # 2: O ← node (LIFO stack)
         OPEN = [(start, None)]     # Stack of (state, parent) tuples
+        OPEN_SET = {start}  # Set to track states in OPEN for O(1) lookup
         parent = {}  # Dictionary mapping state -> parent state for path reconstruction
 
         # Step 3: Initialize closed set (empty set to track visited states)
         # 3: C ← ∅
         CLOSED = set()  # Set of visited states (prevents revisiting)
 
-        print("\n[DFS] START =", start, "GOAL =", goal)
+        if self.debug:
+            print("\n[DFS] START =", start, "GOAL =", goal)
 
         # Initialize visualizer if available
         if vis:
@@ -149,12 +153,16 @@ class DFSPlanner_graphbased(Planner):
         # Step 4: Main search loop - continue while stack is not empty
         # 4: while O != ∅ do
         while OPEN:
-            print("[DFS] STACK (top last):", [s for s, _ in OPEN])
+            if self.debug:
+                print("[DFS] STACK (top last):", [s for s, _ in OPEN])
             
             # Step 5: Pop the last node from stack (LIFO behavior)
             # 5: parent ← last node in O
             v, p = OPEN.pop()  # Remove and return last element (stack pop)
-            print("[DFS] EXPAND:", v)
+            OPEN_SET.remove(v)  # Remove from tracking set
+            
+            if self.debug:
+                print("[DFS] EXPAND:", v)
 
             # Skip if already expanded (duplicate in stack)
             # This can happen if the same state was added multiple times before being expanded
@@ -207,13 +215,15 @@ class DFSPlanner_graphbased(Planner):
 
                 # Step 13: Only add child if not already visited or in frontier
                 # 13: if child not in C and child not in O
-                # Check if child is not in closed set and not already in open set
-                if child not in CLOSED and child not in [n for n, _ in OPEN]:
+                # Use O(1) set lookup instead of O(n) list comprehension
+                if child not in CLOSED and child not in OPEN_SET:
 
                     # Step 14: Add child to stack with current state as parent
                     # 14: add child to O
-                    print("    [DFS] PUSH:", child)
-                    OPEN.append((child, v))  # Push to stack (adds to end, will be popped last)
+                    if self.debug:
+                        print("    [DFS] PUSH:", child)
+                    OPEN.append((child, v))  # Push to stack
+                    OPEN_SET.add(child)  # Add to tracking set
 
                     # Visualization: Mark neighbor as frontier (to be explored)
                     if vis:
@@ -270,3 +280,4 @@ class DFSPlanner_graphbased(Planner):
                 break  # Stop when we reach the start
         path.reverse()  # Reverse to get path from start to current
         return path
+

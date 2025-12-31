@@ -33,7 +33,7 @@ class DFSPlanner_treebased(Planner):
     - Parent pointers stored per-node: Each node has its own parent, not per-state
     """
 
-    def __init__(self, grid_map, motion_model="8n", visualizer=None, max_expansions=50000):
+    def __init__(self, grid_map, motion_model="8n", visualizer=None, max_expansions=50000, debug=False):
         """
         Initialize the DFS tree-based planner.
         
@@ -42,12 +42,14 @@ class DFSPlanner_treebased(Planner):
             motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
             visualizer: Optional visualizer for real-time search visualization
             max_expansions: Maximum number of node expansions before stopping (default: 50000)
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         # Statistics for comparison and analysis
         self.expanded_count = 0
         self.expansion_map = {}
         self.max_expansions = max_expansions
+        self.debug = debug
 
     def get_neighbors(self, gx, gy):
         """
@@ -117,7 +119,8 @@ class DFSPlanner_treebased(Planner):
             nid = id(cur)
             # Detect loops by checking if we've seen this node object before
             if nid in seen:
-                print("[DFS-TREE] Loop detected in partial path reconstruction; stopping.")
+                if self.debug:
+                    print("[DFS-TREE] Loop detected in partial path reconstruction; stopping.")
                 break
             seen.add(nid)
 
@@ -159,7 +162,8 @@ class DFSPlanner_treebased(Planner):
         Returns:
             List of (x, y) tuples representing the path, or None if no path exists
         """
-        print(f"\n[DFS-TREE] START={start} GOAL={goal}")
+        if self.debug:
+            print(f"\n[DFS-TREE] START={start} GOAL={goal}")
 
         # Initialize with start node (root of search tree)
         node = DFSNode(start, parent=None)
@@ -180,14 +184,16 @@ class DFSPlanner_treebased(Planner):
         while O:
             # Check expansion limit to prevent infinite loops
             if self.expanded_count >= self.max_expansions:
-                print(f"[DFS-TREE] Expansion limit reached: {self.max_expansions}")
+                if self.debug:
+                    print(f"[DFS-TREE] Expansion limit reached: {self.max_expansions}")
                 return None  # Indicates limit reached, not necessarily no path
             
             # Pop the last node from stack (LIFO behavior)
             parent_node = O.pop()
             v = parent_node.state
 
-            print(f"[DFS-TREE] EXPAND {v} | stack_size={len(O)}")
+            if self.debug:
+                print(f"[DFS-TREE] EXPAND {v} | stack_size={len(O)}")
 
             # Track expansion statistics
             self.expanded_count += 1
@@ -216,7 +222,8 @@ class DFSPlanner_treebased(Planner):
                 child_node = DFSNode(child_state, parent=parent_node)
                 O.append(child_node)
 
-                print(f"    [DFS-TREE] PUSH {child_state}")
+                if self.debug:
+                    print(f"    [DFS-TREE] PUSH {child_state}")
 
                 if vis:
                     vis.draw_frontier(child_state[0], child_state[1])
