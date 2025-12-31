@@ -20,7 +20,7 @@ class BFSPlanner_graphbased(Planner):
     """
 
 
-    def __init__(self, grid_map, motion_model, visualizer=None):
+    def __init__(self, grid_map, motion_model, visualizer=None, debug=False):
         """
         Initialize the BFS graph-based planner.
         
@@ -28,11 +28,13 @@ class BFSPlanner_graphbased(Planner):
             grid_map: GridMap object representing the search space
             motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
             visualizer: Optional visualizer for real-time search visualization
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         # Statistics for comparison and analysis
         self.expanded_count = 0
         self.expansion_map = {}
+        self.debug = debug
 
 
     def get_neighbors(self, gx, gy):
@@ -201,7 +203,7 @@ class BFSPlanner_treesearch(Planner):
     different visits of the same cell.
     """
 
-    def __init__(self, grid_map, motion_model, visualizer=None, max_expansions=50000):
+    def __init__(self, grid_map, motion_model, visualizer=None, max_expansions=50000, debug=False):
         """
         Initialize the BFS tree-based planner.
         
@@ -210,6 +212,7 @@ class BFSPlanner_treesearch(Planner):
             motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
             visualizer: Optional visualizer for real-time search visualization
             max_expansions: Maximum number of node expansions before stopping (default: 50000)
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         # Unique visit ID counter for tree-based search
@@ -218,6 +221,7 @@ class BFSPlanner_treesearch(Planner):
         self.expanded_count = 0
         self.expansion_map = {}
         self.max_expansions = max_expansions
+        self.debug = debug
 
     def get_neighbors(self, gx, gy):
         if self.motion_model == "4n":
@@ -273,7 +277,8 @@ class BFSPlanner_treesearch(Planner):
         while queue:
             # Check expansion limit to prevent infinite loops
             if self.expanded_count >= self.max_expansions:
-                print(f"[BFS-TREE] Expansion limit reached: {self.max_expansions}")
+                if self.debug:
+                    print(f"[BFS-TREE] Expansion limit reached: {self.max_expansions}")
                 return None  # Indicates limit reached, not necessarily no path
 
             (cur, vid) = queue.popleft()
@@ -285,7 +290,7 @@ class BFSPlanner_treesearch(Planner):
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             # Debug print
-            if vis:
+            if self.debug:
                 parent_vid = parent[cur][vid][1]
                 print(f"EXPAND {cur}: vid={vid}, parent_vid={parent_vid}, queue_size={len(queue)}")
 

@@ -38,7 +38,7 @@ class AStarPlanner_graphbased(Planner):
     the most promising node first.
     """
 
-    def __init__(self, grid_map, motion_model="8n", visualizer=None):
+    def __init__(self, grid_map, motion_model="8n", visualizer=None, debug=False):
         """
         Initialize the A* graph-based planner.
         
@@ -46,12 +46,14 @@ class AStarPlanner_graphbased(Planner):
             grid_map: GridMap object representing the search space
             motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
             visualizer: Optional visualizer for real-time search visualization
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         self.res = grid_map.resolution
         # Statistics for comparison and analysis
         self.expanded_count = 0    # Total number of nodes expanded
         self.expansion_map = {}     # Maps each cell to how many times it was expanded
+        self.debug = debug
 
     def heuristic(self, a, b):
         """
@@ -188,7 +190,7 @@ class AStarPlanner_graphbased(Planner):
             self.expansion_map[(x, y)] = self.expansion_map.get((x, y), 0) + 1
 
             # Debug output showing search progress
-            if self.visualizer:
+            if self.debug:
                 print(
                     f"EXPAND {current_state}: "
                     f"g={current.g:.3f}, "

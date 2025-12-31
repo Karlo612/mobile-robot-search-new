@@ -24,7 +24,7 @@ class AStarPlanner_treebased(Planner):
     but may explore more nodes.
     """
 
-    def __init__(self, grid_map, motion_model="8n", visualizer=None):
+    def __init__(self, grid_map, motion_model="8n", visualizer=None, debug=False):
         """
         Initialize the A* tree-based planner.
         
@@ -32,6 +32,7 @@ class AStarPlanner_treebased(Planner):
             grid_map: GridMap object representing the search space
             motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
             visualizer: Optional visualizer for real-time search visualization
+            debug: If True, print debug information during search (default: False)
         """
         super().__init__(grid_map, motion_model, visualizer)
         self.res = grid_map.resolution
@@ -40,6 +41,7 @@ class AStarPlanner_treebased(Planner):
         # Statistics for comparison and analysis
         self.expanded_count = 0
         self.expansion_map = {}
+        self.debug = debug
 
     # ----------------------------------------
     # Heuristic
@@ -135,7 +137,7 @@ class AStarPlanner_treebased(Planner):
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             # Debug print
-            if vis:
+            if self.debug:
                 print(
                     f"EXPAND {current}: g={g:.3f}, "
                     f"h={self.heuristic(current, goal):.3f}, f={f:.3f}"
