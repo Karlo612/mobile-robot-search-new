@@ -68,12 +68,6 @@ def grid_to_obstacles(grid: np.ndarray):
     return obstacles
 
 
-import random
-
-def manhattan(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-
 def pick_start_goal(grid_map, max_tries=5_000):
     """
     Pick valid start and goal positions from safe cells.
