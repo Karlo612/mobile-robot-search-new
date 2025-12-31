@@ -131,9 +131,8 @@ class AStarPlanner_treebased(Planner):
             f, g, vid, current = heapq.heappop(OPEN)
             cx, cy = current
 
-            #generation of expansion count for report only
+            # Track expansion statistics
             self.expanded_count += 1
-            #generation of heatmap counter  for report only
             self.expansion_map[(cx, cy)] = self.expansion_map.get((cx, cy), 0) + 1
 
             # Debug print
@@ -143,7 +142,7 @@ class AStarPlanner_treebased(Planner):
                     f"h={self.heuristic(current, goal):.3f}, f={f:.3f}"
                 )
 
-            # Goal reached → reconstruct path using correct vid chain
+            # Reconstruct path when goal is reached
             if current == goal:
                 return self.reconstruct_path_3d(parent, start, goal, vid)
 

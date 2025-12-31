@@ -72,7 +72,7 @@ class EmbeddedVisualizer:
 
         self._grid_artist = None
 
-        # ✅ Separate static from dynamic so "clear" doesn't wipe your info/legend
+        # Separate static from dynamic elements for efficient clearing
         self.static_artists = []   # env/search info + legend
         self.dynamic_artists = []  # explored/frontier/path/etc
 
@@ -141,10 +141,10 @@ class EmbeddedVisualizer:
         self.ax.set_xlim(0, w)
         self.ax.set_ylim(0, h)
 
-        # ✅ Make room at top for info boxes + at right for legend
+        # Make room at top for info boxes + at right for legend
         self.fig.subplots_adjust(top=0.78, right=0.80)
 
-        # ✅ Legend outside plot (right) - High Contrast Sunset Theme
+        # Legend outside plot (right) - High Contrast Sunset Theme
         legend_elements = [
             Line2D([0], [0], marker='s', color='#000000', markersize=10, label='Obstacle'),  # Pure black
             Line2D([0], [0], marker='s', color='#ffffff', markersize=10, label='Free'),  # Pure white
@@ -170,7 +170,7 @@ class EmbeddedVisualizer:
         )
         self._register_static(self._legend)
 
-        # ✅ Re-draw info if already set (optional safety)
+        # Re-draw info if already set (optional safety)
         if self.env_info_text:
             self._register_static(self.env_info_text)
         if self.search_info_text:
@@ -187,10 +187,10 @@ class EmbeddedVisualizer:
             f"Obstacle radius: {obstacle_radius}   |   Start: {start}   |   Goal: {goal}"
         )
 
-        # ✅ Remove old env box
+        # Remove old env box
         self._remove_static_artist(self.env_info_text)
 
-        # ✅ Use fig.text so it sits ABOVE the grid, not on it
+        # Use fig.text so it sits ABOVE the grid, not on it
         self.env_info_text = self.fig.text(
             0.5, 0.97, text,
             ha="center", va="top",
@@ -206,7 +206,7 @@ class EmbeddedVisualizer:
             f"Robot radius: {robot_radius}   |   Planner: {planner}   |   Mode: {mode}   |   Motion: {motion}"
         )
 
-        # ✅ Remove old search box
+        # Remove old search box
         self._remove_static_artist(self.search_info_text)
 
         self.search_info_text = self.fig.text(

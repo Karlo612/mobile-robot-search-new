@@ -77,22 +77,18 @@ class DFSPlanner_graphbased(Planner):
 
         # Check each potential move
         for dx, dy in moves:
-            nx, ny = gx + dx, gy + dy  # Calculate neighbor coordinates
+            nx, ny = gx + dx, gy + dy
 
-            # Validation checks: skip invalid neighbors
+            # Skip invalid neighbors
             if not self.grid_map.is_inside(nx, ny):
-                # Neighbor is outside the grid boundaries
                 continue
             if self.grid_map.is_obstacle(nx, ny):
-                # Neighbor is an obstacle (blocked cell)
                 continue
             if self.grid_map.is_inflated(nx, ny):
-                # Neighbor is in inflated/unsafe region
                 if self.visualizer:
                     self.visualizer.draw_inflated(nx, ny)
                 continue
 
-            # Neighbor is valid - yield it for exploration
             yield (nx, ny)
 
     # ========================================================================
@@ -131,15 +127,12 @@ class DFSPlanner_graphbased(Planner):
 
         vis = self.visualizer
 
-        # Steps 1-2: Initialize open set (stack) with start state
-        # 1: node ← with s as state
-        # 2: O ← node (LIFO stack)
+        # Initialize frontier stack with start state
         OPEN = [(start, None)]     # Stack of (state, parent) tuples
         OPEN_SET = {start}  # Set to track states in OPEN for O(1) lookup
         parent = {}  # Dictionary mapping state -> parent state for path reconstruction
 
-        # Step 3: Initialize closed set (empty set to track visited states)
-        # 3: C ← ∅
+        # Initialize closed set to track visited states
         CLOSED = set()  # Set of visited states (prevents revisiting)
 
         if self.debug:
@@ -150,87 +143,68 @@ class DFSPlanner_graphbased(Planner):
             vis.draw_start_goal(start, goal)
             vis.update()
 
-        # Step 4: Main search loop - continue while stack is not empty
-        # 4: while O != ∅ do
+        # Main search loop
         while OPEN:
             if self.debug:
                 print("[DFS] STACK (top last):", [s for s, _ in OPEN])
             
-            # Step 5: Pop the last node from stack (LIFO behavior)
-            # 5: parent ← last node in O
-            v, p = OPEN.pop()  # Remove and return last element (stack pop)
-            OPEN_SET.remove(v)  # Remove from tracking set
+            # Pop the last node from stack (LIFO)
+            v, p = OPEN.pop()
+            OPEN_SET.remove(v)
             
             if self.debug:
                 print("[DFS] EXPAND:", v)
 
             # Skip if already expanded (duplicate in stack)
-            # This can happen if the same state was added multiple times before being expanded
             if v in CLOSED:
                 continue
 
             # Store parent pointer for path reconstruction
-            # Maps current state to its parent state
             if p is not None:
                 parent[v] = p
 
-            # Step 6: Extract coordinates from state
-            # 6: v ← parent.state
+            # Extract coordinates from state
             cx, cy = v
 
-            # Track expansion statistics for analysis
-            # Bookkeeping (benchmarking only)
-            self.expanded_count += 1  # Increment total expansion count
+            # Track expansion statistics
+            self.expanded_count += 1
             self.expansion_map[(cx, cy)] = (
-                self.expansion_map.get((cx, cy), 0) + 1  # Count expansions per state
+                self.expansion_map.get((cx, cy), 0) + 1
             )
 
-            # Visualization: Show explored state and current path being explored
-            # ---- VISUALIZATION (CORRECT LOCATION) ----
+            # Update visualization
             if vis:
-                vis.draw_explored(cx, cy)  # Mark current state as explored
+                vis.draw_explored(cx, cy)
 
-                # Build and visualize partial path from start to current node
+                # Visualize partial path from start to current node
                 partial = self.build_partial_path(parent, start, v)
                 for i in range(len(partial) - 1):
                     x1, y1 = partial[i]
                     x2, y2 = partial[i + 1]
-                    vis.draw_path_segment(x1, y1, x2, y2)  # Draw path segments
+                    vis.draw_path_segment(x1, y1, x2, y2)
 
-                vis.update()  # Update visualization display
+                vis.update()
 
-            # Step 7: Check if current state is the goal
-            # 7: if v == g then return parent
+            # Check if goal reached
             if v == goal:
-                # Goal reached! Reconstruct and return the path
                 return self.reconstruct_path(parent, start, goal)
 
-            # Step 10: Add current state to closed set (mark as visited)
-            # 10: C ← C ∪ {v}
-            CLOSED.add(v)  # Mark state as visited to prevent revisiting
+            # Mark state as visited
+            CLOSED.add(v)
 
-            # Step 11: Generate and process all valid neighbors
-            # 11: for child in successor(v)
+            # Generate and process all valid neighbors
             for child in self.get_neighbors(cx, cy):
-
-                # Step 13: Only add child if not already visited or in frontier
-                # 13: if child not in C and child not in O
-                # Use O(1) set lookup instead of O(n) list comprehension
+                # Only add child if not already visited or in frontier
                 if child not in CLOSED and child not in OPEN_SET:
-
-                    # Step 14: Add child to stack with current state as parent
-                    # 14: add child to O
                     if self.debug:
                         print("    [DFS] PUSH:", child)
-                    OPEN.append((child, v))  # Push to stack
-                    OPEN_SET.add(child)  # Add to tracking set
+                    OPEN.append((child, v))
+                    OPEN_SET.add(child)
 
-                    # Visualization: Mark neighbor as frontier (to be explored)
                     if vis:
                         vis.draw_frontier(child[0], child[1])
 
-        # Step 18: No path found - stack exhausted without reaching goal
-        # 18: return failure
+        # No path found
         return None
 
     # ========================================================================

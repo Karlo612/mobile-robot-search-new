@@ -181,8 +181,8 @@ class NavigationSystem:
         # --------------------------------------------------
         # 1. Check obstacle inflation status
         # --------------------------------------------------
-        # Note: Obstacles are typically inflated during environment creation,
-        # so we just verify the inflation state here rather than re-inflating
+        # Obstacles are inflated during environment creation, so we verify
+        # the inflation state here rather than re-inflating
         
         inflated_count = sum(
             grid_map.is_inflated(x, y)

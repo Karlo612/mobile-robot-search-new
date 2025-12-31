@@ -100,7 +100,6 @@ class AStarPlanner_graphbased(Planner):
         """
         # Define movement patterns based on motion model
         if self.motion_model == "4n":
-            # 4-neighbor: up, down, left, right only
             moves = [(1,0), (-1,0), (0,1), (0,-1)]
         else:
             # 8-neighbor: includes diagonal movements
@@ -140,7 +139,7 @@ class AStarPlanner_graphbased(Planner):
         Returns:
             Movement cost scaled by grid resolution
         """
-        # Diagonal movement costs √2 times more than straight movement
+        # Diagonal movement costs sqrt(2) times more than straight movement
         if x1 != x2 and y1 != y2:
             return math.sqrt(2) * self.res
         # Straight movement (horizontal or vertical)
@@ -210,7 +209,7 @@ class AStarPlanner_graphbased(Planner):
             if vis:
                 vis.draw_explored(cx, cy)
 
-                # draw partial path from start → current
+                # Draw partial path from start to current
                 partial = self.build_partial_path(current)
                 for i in range(len(partial) - 1):
                     x1, y1 = partial[i]

@@ -196,7 +196,7 @@ class SearchGUI(tk.Tk):
             control_frame,
             text="Run Search",
             command=self.run_search,
-            state="disabled"   # 🔴 disabled until grid is generated
+            state="disabled"   # disabled until grid is generated
         )
         self.run_button.pack(**pad)
 
@@ -283,7 +283,7 @@ class SearchGUI(tk.Tk):
             )
             self.vis.update()
 
-            # ✅ ENVIRONMENT IS NOW VALID
+            # ENVIRONMENT IS NOW VALID
             self.env_dirty = False
             self.run_button.config(state="normal")
 
