@@ -25,11 +25,17 @@ Implementation of A*, BFS and DFS in grid-based environment for mobile robot pat
    **Windows:** Download from [python.org](https://www.python.org/downloads/) and check "Add Python to PATH"
 
 2. **Create and activate virtual environment:**
+
+   **macOS/Linux:**
    ```bash
    python3.11 -m venv venv311
-   source venv311/bin/activate  # macOS/Linux
-   # or
-   venv311\Scripts\activate     # Windows
+   source venv311/bin/activate
+   ```
+
+   **Windows:**
+   ```bash
+   python -m venv venv311
+   venv311\Scripts\activate
    ```
 
 3. **Install dependencies:**
@@ -58,3 +64,4 @@ python -m CodeBase.GUI.gui_app
 - **"No module named 'tkinter'"**: Install tkinter support (see Installation step 1)
 - **Import errors**: Make sure virtual environment is activated and you're running from project root
 - **GUI doesn't appear**: Check terminal for error messages, ensure Python 3.11+ is used
+- **Windows: "python3.11 not recognized"**: Use `python` instead of `python3.11` on Windows
