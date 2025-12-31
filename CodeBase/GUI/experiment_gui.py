@@ -572,9 +572,10 @@ class ExperimentGUI(tk.Toplevel):
             # Determine status: check if limit was reached
             expanded = result.get("expanded_nodes", 0)
             max_exp = result.get("max_expansions", 0)
-            if max_exp > 0 and expanded >= max_exp and not found:
+            found_bool = result.get("found", False)  # Use boolean for status logic
+            if max_exp > 0 and expanded >= max_exp and not found_bool:
                 status = "Limit Reached"
-            elif found:
+            elif found_bool:
                 status = "Success"
             else:
                 status = "Failed"
