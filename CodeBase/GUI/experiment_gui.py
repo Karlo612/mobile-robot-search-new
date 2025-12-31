@@ -3,18 +3,17 @@ Experiment GUI - Batch Experiment Runner Interface
 
 This module provides a comprehensive GUI for running batch path planning
 experiments. Users can generate multiple maps, run different planners on them,
-view results in tables and plots, compare performance metrics, and export
-data for further analysis. The GUI supports multiple map sizes, planners,
-and provides visualization of search heatmaps and paths.
+view results in tables and plots, and compare performance metrics. The GUI
+supports multiple map sizes, planners, and provides visualization of search
+heatmaps and paths.
 """
 
 import tkinter as tk
 import os
 from datetime import datetime
 
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox
 import threading
-import csv
 import numpy as np
 from CodeBase.Util.heatmap_utils import expansion_map_to_array
 
@@ -31,7 +30,6 @@ class ExperimentGUI(tk.Toplevel):
     - Running experiments with multiple planners and configurations
     - Viewing results in tables, plots, and heatmaps
     - Comparing performance across different planners
-    - Exporting results to CSV and NPZ files
     
     The GUI uses a tabbed interface with separate views for logs, results
     tables, comparison plots, and heatmap visualization. Experiments run
@@ -481,51 +479,6 @@ class ExperimentGUI(tk.Toplevel):
     def _update_progress(self, value: int):
         self.progress["value"] = value
         self.update_idletasks()
-
-    # --------------------------------------------------
-    # Export
-    # --------------------------------------------------
-    def export_csv(self):
-        if self._is_running:
-            return
-
-        if not self.results:
-            messagebox.showwarning("No Data", "Run experiment first.")
-            return
-
-        path = filedialog.asksaveasfilename(defaultextension=".csv")
-        if not path:
-            return
-
-        # ---- CSV ----
-        cols = sorted({k for r in self.results for k in r.keys()})
-        with open(path, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=cols)
-            writer.writeheader()
-            for r in self.results:
-                writer.writerow(r)
-
-        # ---- NPZ ----
-        import numpy as np
-
-        np.savez_compressed(
-            path.replace(".csv", "_data.npz"),
-
-            # grids
-            **{f"grid/{k}": v for k, v in self.grids.items()},
-
-            # start/goal
-            **{f"start/{k}": v for k, v in self.starts.items()},
-            **{f"goal/{k}": v for k, v in self.goals.items()},
-
-            # heatmaps
-            **{f"heatmap/{k}": v for k, v in self.heatmaps.items()},
-            
-            #paths
-            **{f"path/{k}": v for k, v in self.paths.items()},
-        )
-
-        self.log_msg(f"[OK] Exported CSV + NPZ to: {path}")
 
     
     # --------------------------------------------------
