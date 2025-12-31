@@ -1,15 +1,44 @@
+"""
+A* Tree-Based Path Planner
+
+This module implements the A* search algorithm using a tree-based approach.
+Tree-based search allows revisiting the same grid cell multiple times if
+reached through different paths. This is useful when the same cell might
+be part of multiple paths with different costs. Each visit gets a unique
+visit ID to track different paths through the same cell.
+"""
+
 from .planner import Planner
 import heapq
 import math
 from collections import defaultdict
 
 class AStarPlanner_treebased(Planner):
+    """
+    A* path planning algorithm using tree-based search.
+    
+    Unlike graph-based search, tree-based search allows the same cell to be
+    visited multiple times if reached through different paths. This requires
+    a 3D state space (x, y, visit_id) to track which specific visit of a cell
+    we're referring to. This can be more memory efficient in some scenarios
+    but may explore more nodes.
+    """
 
     def __init__(self, grid_map, motion_model="8n", visualizer=None):
+        """
+        Initialize the A* tree-based planner.
+        
+        Args:
+            grid_map: GridMap object representing the search space
+            motion_model: "4n" for 4-neighbor or "8n" for 8-neighbor movement
+            visualizer: Optional visualizer for real-time search visualization
+        """
         super().__init__(grid_map, motion_model, visualizer)
         self.res = grid_map.resolution
-        self.counter = 0   # unique visit-id counter. this is needed to track parents as the tree base search in grid can go in loop
-        self.expanded_count = 0 # needed for comparisn bechmark mode only
+        # Unique visit ID counter - needed because tree search can revisit cells
+        self.counter = 0
+        # Statistics for comparison and analysis
+        self.expanded_count = 0
         self.expansion_map = {}
 
     # ----------------------------------------
@@ -63,18 +92,32 @@ class AStarPlanner_treebased(Planner):
     # MAIN TREE-BASED A*
     # ----------------------------------------
     def plan(self, start, goal):
+        """
+        Execute the A* search algorithm using tree-based search.
+        
+        Tree-based search maintains a 3D state space (x, y, visit_id) where
+        the same cell can be visited multiple times through different paths.
+        This allows exploring alternative paths even after visiting a cell once.
+        
+        Args:
+            start: Tuple (x, y) representing the start position
+            goal: Tuple (x, y) representing the goal position
+            
+        Returns:
+            List of (x, y) tuples representing the path, or None if no path exists
+        """
+        # Priority queue: (f_cost, g_cost, visit_id, state)
+        OPEN = []
 
-        OPEN = []  # heap of (f, g, visit_id, (x,y))
-
-        # 3D parent[gx][visit_id] = (parent_state, parent_vid)
+        # 3D parent tracking: parent[state][visit_id] = (parent_state, parent_vid)
         parent = defaultdict(dict)
         g_cost = defaultdict(dict)
 
-        # push root
+        # Initialize with start node (visit_id = 0)
         h0 = self.heuristic(start, goal)
         g_cost[start][0] = 0.0
         heapq.heappush(OPEN, (h0, 0.0, 0, start))
-        self.counter = 1  # next visit ID
+        self.counter = 1  # Next visit ID will be 1
 
         vis = self.visualizer
         if vis:
@@ -112,20 +155,23 @@ class AStarPlanner_treebased(Planner):
                     vis.draw_path_segment(x1, y1, x2, y2)
                 vis.update()
 
-            # TREE SEARCH (no CLOSED): expand ALL children
+            # TREE SEARCH: No CLOSED set - we can revisit cells through different paths
+            # Expand all neighbors and create new visit IDs for each
             for child in self.get_neighbors(cx, cy):
-
                 nx, ny = child
+                # Calculate costs for this new path
                 ng = g + self.cost(cx, cy, nx, ny)
                 nf = ng + self.heuristic(child, goal)
 
+                # Assign unique visit ID to this visit of the child cell
                 child_vid = self.counter
                 self.counter += 1
 
-                # Store explicit parent link: (parent_state, parent_vid)
+                # Store parent link in 3D space: (parent_state, parent_vid)
                 parent[child][child_vid] = (current, vid)
                 g_cost[child][child_vid] = ng
 
+                # Add to priority queue
                 heapq.heappush(OPEN, (nf, ng, child_vid, child))
 
                 if vis:
@@ -138,8 +184,19 @@ class AStarPlanner_treebased(Planner):
     # ----------------------------------------
     def reconstruct_path_3d(self, parent, start, goal, vid):
         """
-        Reconstruct full final path from goal back to start.
-        Works with (state, vid) pointers.
+        Reconstruct the full path from goal back to start using 3D parent pointers.
+        
+        Since tree-based search uses visit IDs, we need to follow both the state
+        and visit ID through the parent chain. Includes loop detection for safety.
+        
+        Args:
+            parent: 3D parent dictionary
+            start: Start position
+            goal: Goal position
+            vid: Visit ID of the goal node
+            
+        Returns:
+            List of (x, y) tuples representing the complete path
         """
         path = []
         cur_state = goal
@@ -177,8 +234,19 @@ class AStarPlanner_treebased(Planner):
     # ----------------------------------------
     def build_partial_path_3d(self, parent, start, state, vid):
         """
-        Returns partial path for visualization, safe version.
-        Output must be list of (x,y) states.
+        Build a partial path from the given state back to start for visualization.
+        
+        Used during search to show the current best path to any node being explored.
+        Includes loop detection to prevent infinite loops in visualization.
+        
+        Args:
+            parent: 3D parent dictionary
+            start: Start position
+            state: Current state to build path from
+            vid: Visit ID of the current state
+            
+        Returns:
+            List of (x, y) tuples representing the partial path
         """
         path = []
         cur_state = state

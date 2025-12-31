@@ -1,3 +1,12 @@
+"""
+Plot Experiment Results - Visualization of Path Planning Experiments
+
+This module provides functionality to visualize and analyze results from
+path planning experiments. It generates performance plots, heatmaps showing
+search expansion patterns, and comparative visualizations across different
+planners and map sizes.
+"""
+
 import os
 import numpy as np
 import pandas as pd
@@ -5,9 +14,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 
-
 # ==================================================
-# CONFIG (MATCH YOUR DIRECTORY)
+# CONFIG (DEFAULTS - OVERRIDDEN BY generate_plots())
 # ==================================================
 CSV_PATH = "test1.csv"
 NPZ_PATH = "test1_data.npz"
@@ -201,6 +209,17 @@ def boxplot_metric_by_size(df, metric):
 
 
 def generate_plots(csv_path, npz_path, outdir="plots"):
+    """
+    Generate all plots from experiment results.
+    
+    Creates performance bar plots, heatmaps, and box plots for comparing
+    different planners across various map sizes and metrics.
+    
+    Args:
+        csv_path: Path to CSV file with experiment results
+        npz_path: Path to NPZ file with heatmap and path data
+        outdir: Output directory for generated plots
+    """
     global CSV_PATH, NPZ_PATH, OUTDIR
 
     CSV_PATH = csv_path
@@ -220,8 +239,3 @@ def generate_plots(csv_path, npz_path, outdir="plots"):
     # 2. box plots
     for metric in METRICS:
         boxplot_metric_by_size(df, metric)
-
-
-
-if __name__ == "__main__":
-    main()

@@ -1,4 +1,11 @@
-# CodeBase/GUI/gui_app.py
+"""
+GUI Application - Main Search Visualization Interface
+
+This module provides the main GUI application for interactive path planning.
+Users can generate random grids, configure search parameters, run path planning
+algorithms, and visualize the results in real-time. The GUI also provides access
+to batch experiment functionality.
+"""
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -14,9 +21,23 @@ from CodeBase.Visualization.embedded_visualizer import EmbeddedVisualizer
 from CodeBase.GUI.experiment_gui import ExperimentGUI
 
 
-
 class SearchGUI(tk.Tk):
+    """
+    Main GUI application for interactive path planning visualization.
+    
+    Provides a user-friendly interface to:
+    - Generate random grid environments with configurable parameters
+    - Select search algorithms (A*, BFS, DFS) and search modes (graph/tree)
+    - Run path planning with real-time visualization
+    - Access batch experiment functionality
+    
+    The GUI uses a two-panel layout: left panel for controls, right panel
+    for visualization. It tracks environment state to ensure valid operations.
+    """
     def __init__(self):
+        """
+        Initialize the main GUI window and build the interface.
+        """
         super().__init__()
 
         self.title("Search Visualization Control")
@@ -30,7 +51,7 @@ class SearchGUI(tk.Tk):
         self.current_config = None
         self.vis = None
 
-        # 🔴 ENVIRONMENT DIRTY FLAG
+        # Environment dirty flag: True when parameters change, requires regeneration
         self.env_dirty = True
 
         self._build_widgets()
@@ -40,10 +61,22 @@ class SearchGUI(tk.Tk):
     # Clean shutdown
     # --------------------------------------------------
     def on_close(self):
+        """
+        Handle window close event with proper cleanup.
+        
+        Schedules matplotlib cleanup on the Tk main thread to avoid
+        threading issues during shutdown.
+        """
         # Schedule matplotlib cleanup on the Tk main thread
         self.after(0, self._safe_close)
 
     def _safe_close(self):
+        """
+        Safely close matplotlib figures and destroy the window.
+        
+        Closes all matplotlib figures to prevent memory leaks and
+        then destroys the Tk window.
+        """
         try:
             import matplotlib.pyplot as plt
             plt.close("all")
@@ -51,11 +84,16 @@ class SearchGUI(tk.Tk):
             pass
         self.destroy()
 
-
     # --------------------------------------------------
     # Mark environment dirty
     # --------------------------------------------------
     def _mark_env_dirty(self, *_):
+        """
+        Mark environment as dirty when parameters change.
+        
+        Called when user changes environment parameters (grid size, obstacle
+        ratio, etc.). Disables the run button until a new grid is generated.
+        """
         self.env_dirty = True
         self.run_button.config(state="disabled")
 
@@ -181,6 +219,13 @@ class SearchGUI(tk.Tk):
     # Generate Grid
     # --------------------------------------------------
     def generate_grid(self):
+        """
+        Generate a new random grid environment based on current parameters.
+        
+        Creates a random grid with the specified size, obstacle ratio, robot
+        radius, and resolution. Updates the visualization and enables the
+        run button once generation succeeds.
+        """
         try:
             size_map = {
                 "Small (10x10)": 10,
@@ -251,7 +296,13 @@ class SearchGUI(tk.Tk):
     # Run Search
     # --------------------------------------------------
     def run_search(self):
-
+        """
+        Execute path planning with the current configuration.
+        
+        Validates that the environment is up to date, then runs the selected
+        search algorithm with real-time visualization. The search runs
+        synchronously and updates the visualization as it progresses.
+        """
         if self.env_dirty:
             messagebox.showwarning(
                 "Environment out of date",
@@ -304,11 +355,18 @@ class SearchGUI(tk.Tk):
             messagebox.showerror("Execution Error", str(e))
 
     def open_experiment_gui(self):
+        """
+        Open the batch experiment GUI window.
+        
+        Launches a separate window for running batch experiments across
+        multiple maps, planners, and configurations.
+        """
         ExperimentGUI(self)
 
 # --------------------------------------------------
 # Entry point
 # --------------------------------------------------
 if __name__ == "__main__":
+    # Create and run the main GUI application
     app = SearchGUI()
     app.mainloop()

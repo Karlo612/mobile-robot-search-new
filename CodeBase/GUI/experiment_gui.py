@@ -1,6 +1,15 @@
+"""
+Experiment GUI - Batch Experiment Runner Interface
+
+This module provides a comprehensive GUI for running batch path planning
+experiments. Users can generate multiple maps, run different planners on them,
+view results in tables and plots, compare performance metrics, and export
+data for further analysis. The GUI supports multiple map sizes, planners,
+and provides visualization of search heatmaps and paths.
+"""
+
 import tkinter as tk
 import os
-import json
 from datetime import datetime
 
 from tkinter import ttk, messagebox, filedialog
@@ -9,16 +18,32 @@ import csv
 import numpy as np
 from CodeBase.Util.heatmap_utils import expansion_map_to_array
 
-
 from CodeBase.Evaluation.run_on_map import run_planner_on_map
 from CodeBase.Util.random_grid_factory import create_random_grid_environment
-from CodeBase.Evaluation.plot_experiment_results import generate_plots
-
-
 
 
 class ExperimentGUI(tk.Toplevel):
+    """
+    GUI window for running batch path planning experiments.
+    
+    Provides a comprehensive interface for:
+    - Generating multiple random maps of different sizes
+    - Running experiments with multiple planners and configurations
+    - Viewing results in tables, plots, and heatmaps
+    - Comparing performance across different planners
+    - Exporting results to CSV and NPZ files
+    
+    The GUI uses a tabbed interface with separate views for logs, results
+    tables, comparison plots, and heatmap visualization. Experiments run
+    in a separate thread to keep the UI responsive.
+    """
     def __init__(self, parent):
+        """
+        Initialize the experiment GUI window.
+        
+        Args:
+            parent: Parent Tk window (typically the main SearchGUI)
+        """
         super().__init__(parent)
 
         self.title("Search Experiment Runner")
@@ -81,6 +106,12 @@ class ExperimentGUI(tk.Toplevel):
         self.resolution.insert(0, "1.0")
         self.resolution.pack(fill="x")
 
+        ttk.Label(left, text="Max Expansions").pack(anchor="w", pady=(6, 0))
+        self.max_expansions = ttk.Entry(left)
+        self.max_expansions.insert(0, "50000")
+        self.max_expansions.pack(fill="x")
+        ttk.Label(left, text="Limit for tree-based algorithms", font=("Arial", 8)).pack(anchor="w", pady=(2, 0))
+
         ttk.Label(left, text="Motion Model").pack(anchor="w", pady=(6, 0))
         self.motion = ttk.Combobox(left, values=["4n", "8n"], state="readonly")
         self.motion.current(0)
@@ -116,12 +147,6 @@ class ExperimentGUI(tk.Toplevel):
 
         self.btn_run = ttk.Button(left, text="Run Experiment", command=self.run_experiment)
         self.btn_run.pack(fill="x", pady=4)
-
-        self.btn_export = ttk.Button(left, text="Export CSV", command=self.export_csv)
-        self.btn_export.pack(fill="x", pady=4)
-
-        self.btn_plot = ttk.Button(left,text="Generate Plots",command=self.generate_plots_from_files)
-        self.btn_plot.pack(fill="x", pady=4)
 
         self.btn_view_results = ttk.Button(left, text="View Results", command=self._show_results)
         self.btn_view_results.pack(fill="x", pady=4)
@@ -177,9 +202,7 @@ class ExperimentGUI(tk.Toplevel):
             state = "disabled" if running else "normal"
             self.btn_generate.configure(state=state)
             self.btn_run.configure(state=state)
-            self.btn_export.configure(state=("normal" if (not running and self.results) else state))
             self.btn_view_results.configure(state=("normal" if (not running and self.results) else "disabled"))
-            self.btn_plot.configure(state=("normal" if (not running and self.results) else state))
 
         self.after(0, apply)
 
@@ -250,7 +273,12 @@ class ExperimentGUI(tk.Toplevel):
                     map_id = f"{name}_{i}"
 
                     # ---- STORE STATIC MAP DATA (ONCE) ----
-                    self.grids[map_id] = grid_map.grid.copy()
+                    # Combine original obstacles + inflated obstacles for accurate visualization
+                    combined_obstacles = grid_map.grid.copy().astype(float)
+                    if grid_map.inflated_grid is not None:
+                        # Mark inflated cells as obstacles (value 1) so they show as black
+                        combined_obstacles[grid_map.inflated_grid] = 1
+                    self.grids[map_id] = combined_obstacles
                     self.starts[map_id] = (robot.sx, robot.sy)
                     self.goals[map_id] = (robot.gx, robot.gy)
 
@@ -334,29 +362,13 @@ class ExperimentGUI(tk.Toplevel):
     def _run_experiment_thread(self, planner_defs):
         try:
             motion = self.motion.get()
+            try:
+                max_expansions = int(self.max_expansions.get())
+            except ValueError:
+                max_expansions = 50000  # Default if invalid input
+                self.log_msg_async(f"[WARNING] Invalid max_expansions, using default: {max_expansions}")
 
-            # Separate planners by tree/graph
-            tree_planners = [(name, True) for name, tree in planner_defs if tree]
-            graph_planners = [(name, False) for name, tree in planner_defs if not tree]
-            
-            # Reorder tree planners: A* → BFS → DFS
-            def sort_key(planner_tuple):
-                name, _ = planner_tuple
-                if name == "Astar":
-                    return 0
-                elif name == "BFS":
-                    return 1
-                elif name == "DFS":
-                    return 2
-                else:
-                    return 3
-            
-            tree_planners_sorted = sorted(tree_planners, key=sort_key)
-            
-            # Combine: tree-based first (in order), then graph-based
-            ordered_planner_defs = tree_planners_sorted + graph_planners
-
-            total_jobs = sum(len(envs) for envs in self.maps.values()) * len(ordered_planner_defs)
+            total_jobs = sum(len(envs) for envs in self.maps.values()) * len(planner_defs)
             self.after(0, lambda: self._init_progress(total_jobs))
 
             job = 0
@@ -367,13 +379,14 @@ class ExperimentGUI(tk.Toplevel):
                     # stable map id (matches generate_maps)
                     map_id = env_data["meta"]["map_id"]
 
-                    for planner_name, use_tree_search in ordered_planner_defs:
+                    for planner_name, use_tree_search in planner_defs:
                         exec_cfg = {
                             "planner": planner_name,
                             "motion": motion,
                             "use_tree_search": use_tree_search,
                             "visualize_search": False,   # headless
                             "navigation_mode": "batch",
+                            "max_expansions": max_expansions,
                         }
 
                         # ---- RUN PLANNER ----
@@ -427,22 +440,24 @@ class ExperimentGUI(tk.Toplevel):
                         result["planner"] = planner_name
                         result["tree"] = use_tree_search
                         result["motion"] = motion
+                        result["max_expansions"] = max_expansions  # Store limit for status detection
 
                         self.results.append(result)
 
                         job += 1
                         self.after(0, lambda v=job: self._update_progress(v))
 
-                        status = ""
-                        if result.get('exceeded_expansion_limit', False):
-                            status = " [STOPPED: expansion limit exceeded]"
+                        # Check if limit was reached
+                        expanded = result.get("expanded_nodes", 0)
+                        limit_reached = max_expansions > 0 and expanded >= max_expansions and not result.get("found", False)
+                        limit_msg = " [LIMIT REACHED]" if limit_reached else ""
                         
                         self.log_msg_async(
                             f"{size_name} map {mid} | {planner_name} "
                             f"{'Tree' if use_tree_search else 'Graph'} | "
                             f"time={result.get('runtime_ms', -1):.1f}ms "
                             f"exp={result.get('expanded_nodes', 'NA')} "
-                            f"path={result.get('path_len', 'NA')}{status}"
+                            f"path={result.get('path_len', 'NA')}{limit_msg}"
                         )
 
             self.log_msg_async("[DONE] Experiment complete")
@@ -512,69 +527,6 @@ class ExperimentGUI(tk.Toplevel):
 
         self.log_msg(f"[OK] Exported CSV + NPZ to: {path}")
 
-
-    def generate_plots_from_files(self):
-        try:
-            # 1. Ask for CSV
-            csv_path = filedialog.askopenfilename(
-                title="Select experiment CSV file",
-                filetypes=[("CSV files", "*.csv")]
-            )
-            if not csv_path:
-                return
-
-            # 2. Infer NPZ path
-            npz_path = csv_path.replace(".csv", "_data.npz")
-            if not os.path.exists(npz_path):
-                npz_path = filedialog.askopenfilename(
-                    title="Select experiment NPZ file",
-                    filetypes=[("NPZ files", "*.npz")]
-                )
-                if not npz_path:
-                    return
-
-            # 3. Output directory
-            outdir = filedialog.askdirectory(
-                title="Select output directory for plots"
-            )
-            if not outdir:
-                return
-
-            # 4. Run plotter (can be slow → thread)
-            threading.Thread(
-                target=self._run_plotter_thread,
-                args=(csv_path, npz_path, outdir),
-                daemon=True
-            ).start()
-
-        except Exception as e:
-            messagebox.showerror("Plot Error", str(e))
-
-    def _run_plotter_thread(self, csv_path, npz_path, outdir):
-        try:
-            self.after(0, lambda: self.btn_plot.config(state="disabled"))
-            self.log_msg_async("[PLOT] Generating plots...")
-
-            generate_plots(csv_path, npz_path, outdir)
-
-            self.log_msg_async(f"[OK] Plots generated in: {outdir}")
-            self.after(
-                0,
-                lambda: messagebox.showinfo(
-                    "Plots Generated",
-                    f"Plots successfully generated in:\n{outdir}"
-                )
-            )
-
-        except Exception as e:
-            self.log_msg_async(f"[ERROR] Plotting failed: {e}")
-            self.after(
-                0,
-                lambda: messagebox.showerror("Plot Error", str(e))
-            )
-
-        finally:
-            self.after(0, lambda: self.btn_plot.config(state="normal"))
     
     # --------------------------------------------------
     # Results Table
@@ -608,7 +560,7 @@ class ExperimentGUI(tk.Toplevel):
         scrollbar_x = ttk.Scrollbar(table_container, orient="horizontal")
         
         columns = ("Planner", "Mode", "Map Size", "Map ID", "Runtime (ms)", 
-                   "Expanded Nodes", "Path Length", "Path Cost", "Memory (KB)", "Found")
+                   "Expanded Nodes", "Path Length", "Path Cost", "Memory (KB)", "Found", "Status")
         
         self.results_tree = ttk.Treeview(table_container, columns=columns, show="headings",
                                          yscrollcommand=scrollbar_y.set,
@@ -620,7 +572,7 @@ class ExperimentGUI(tk.Toplevel):
         # Configure columns
         col_widths = {"Planner": 80, "Mode": 60, "Map Size": 70, "Map ID": 60,
                      "Runtime (ms)": 100, "Expanded Nodes": 110, "Path Length": 90,
-                     "Path Cost": 90, "Memory (KB)": 90, "Found": 50}
+                     "Path Cost": 90, "Memory (KB)": 90, "Found": 50, "Status": 100}
         
         for col in columns:
             self.results_tree.heading(col, text=col, command=lambda c=col: self._sort_table(c))
@@ -667,6 +619,16 @@ class ExperimentGUI(tk.Toplevel):
             mode = "Tree" if result.get("tree", False) else "Graph"
             found = "Yes" if result.get("found", False) else "No"
             
+            # Determine status: check if limit was reached
+            expanded = result.get("expanded_nodes", 0)
+            max_exp = result.get("max_expansions", 0)
+            if max_exp > 0 and expanded >= max_exp and not found:
+                status = "Limit Reached"
+            elif found:
+                status = "Success"
+            else:
+                status = "Failed"
+            
             values = (
                 planner,
                 mode,
@@ -677,7 +639,8 @@ class ExperimentGUI(tk.Toplevel):
                 str(result.get("path_len", "N/A")),
                 f"{result.get('path_cost', 0):.2f}" if result.get("path_cost") != float('inf') else "N/A",
                 f"{result.get('memory_kb', 0):.2f}",
-                found
+                found,
+                status
             )
             
             self.results_tree.insert("", "end", values=values)
@@ -736,12 +699,6 @@ class ExperimentGUI(tk.Toplevel):
         self.plot_view.current(0)
         self.plot_view.pack(side="left", padx=5)
         def on_view_change(e):
-            # #region agent log
-            try:
-                with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"E","location":"experiment_gui.py:on_view_change","message":"View combobox changed","data":{"new_view":self.plot_view.get()},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-            except: pass
-            # #endregion
             self._toggle_map_filter()
             self._update_plot()
         self.plot_view.bind("<<ComboboxSelected>>", on_view_change)
@@ -773,8 +730,6 @@ class ExperimentGUI(tk.Toplevel):
         
         self.heatmap_map_label = ttk.Label(self.heatmap_nav_frame, text="Map: 1/5", width=15)
         self.heatmap_map_label.pack(side="left", padx=5)
-        
-        ttk.Button(plot_controls, text="Update Plot", command=self._update_plot).pack(side="left", padx=5)
         
         # Add a separator/spacer to ensure navigation frame is visible
         ttk.Separator(plot_controls, orient="vertical").pack(side="left", fill="y", padx=5)
@@ -1075,22 +1030,9 @@ class ExperimentGUI(tk.Toplevel):
     
     def _toggle_map_filter(self):
         """Show/hide map filter and navigation based on view type"""
-        # #region agent log
         view_type = self.plot_view.get()
-        try:
-            with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"experiment_gui.py:_toggle_map_filter","message":"_toggle_map_filter called","data":{"view_type":view_type},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-        except: pass
-        # #endregion
         
         if view_type == "Heatmap":
-            # #region agent log
-            try:
-                with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"B","location":"experiment_gui.py:_toggle_map_filter","message":"Showing heatmap controls","data":{"before_pack":True},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             # Pack map filter on left
             self.plot_map_filter.pack(side="left", padx=5)
             # Pack navigation frame on RIGHT side to ensure it's always visible and not cut off
@@ -1103,39 +1045,15 @@ class ExperimentGUI(tk.Toplevel):
             # Force update to ensure visibility
             self.heatmap_nav_frame.update_idletasks()
             
-            # #region agent log
-            try:
-                nav_visible = self.heatmap_nav_frame.winfo_viewable() if hasattr(self.heatmap_nav_frame, 'winfo_viewable') else "unknown"
-                nav_width = self.heatmap_nav_frame.winfo_width() if hasattr(self.heatmap_nav_frame, 'winfo_width') else "unknown"
-                button_visible = self.btn_next_map.winfo_viewable() if hasattr(self.btn_next_map, 'winfo_viewable') else "unknown"
-                with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"experiment_gui.py:_toggle_map_filter","message":"After pack - nav frame state","data":{"nav_visible":str(nav_visible),"nav_width":str(nav_width),"button_visible":str(button_visible)},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             # Hide planner filter for heatmap (we show all planners)
             self.plot_planner_filter.pack_forget()
         else:
-            # #region agent log
-            try:
-                with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                    f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"A","location":"experiment_gui.py:_toggle_map_filter","message":"Hiding heatmap controls","data":{"view_type":view_type},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-            except: pass
-            # #endregion
-            
             self.plot_map_filter.pack_forget()
             self.plot_planner_filter.pack_forget()
             self.heatmap_nav_frame.pack_forget()
     
     def _cycle_heatmap_map(self):
         """Cycle to next map, looping back to 0 after the last map"""
-        # #region agent log
-        try:
-            with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"D","location":"experiment_gui.py:_cycle_heatmap_map","message":"Cycle button clicked","data":{"current_idx":self.current_heatmap_map_idx,"list_len":len(self.heatmap_map_list) if self.heatmap_map_list else 0},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-        except: pass
-        # #endregion
-        
         if not self.heatmap_map_list:
             return
         
@@ -1154,16 +1072,17 @@ class ExperimentGUI(tk.Toplevel):
         import matplotlib.pyplot as plt
         import numpy as np
         
-        # Get colormap (same as plot_experiment_results.py)
+        # New intuitive colormap: cool (blue) to warm (red) gradient
+        # This represents exploration intensity from low (cool) to high (warm)
         colors = [
-            "black",    # -1 => obstacle
-            "white",    # 0  => unvisited
-            "#ffffcc",
-            "#ffdd88",
-            "#ffbb55",
-            "#ff9933",
-            "#ff5500",
-            "#cc0000",
+            "black",        # -1 => obstacle (keep black for obstacles)
+            "#f0f8ff",      # 0  => unvisited (alice blue - very light blue)
+            "#add8e6",      # 1-5 => light blue (light exploration)
+            "#87ceeb",      # 5-10 => sky blue (moderate exploration)
+            "#00ff00",      # 10-20 => bright green (increasing exploration)
+            "#ffff00",      # 20-50 => yellow (high exploration)
+            "#ff8c00",      # 50-200 => dark orange (very high exploration)
+            "#ff0000",      # 200+ => red (maximum exploration)
         ]
         bounds = [-1, 0, 1, 5, 10, 20, 50, 200, 1_000_000]
         cmap = ListedColormap(colors)
@@ -1286,14 +1205,6 @@ class ExperimentGUI(tk.Toplevel):
             # Only one map - disable button
             self.btn_next_map.config(state="disabled")
         
-        # #region agent log
-        try:
-            nav_visible = self.heatmap_nav_frame.winfo_viewable() if hasattr(self.heatmap_nav_frame, 'winfo_viewable') else "unknown"
-            with open('/Users/karlo/Desktop/T1AAI/aip/mobile-robot-search/.cursor/debug.log', 'a') as f:
-                f.write(json.dumps({"sessionId":"debug-session","runId":"run1","hypothesisId":"C","location":"experiment_gui.py:_plot_heatmaps","message":"Updating button state","data":{"button_state":self.btn_next_map.cget("state"),"nav_frame_visible":str(nav_visible),"current_idx":self.current_heatmap_map_idx,"list_len":len(self.heatmap_map_list)},"timestamp":int(datetime.now().timestamp()*1000)}) + '\n')
-        except: pass
-        # #endregion
-        
         # Get grid for this map
         if map_key not in self.grids:
             self.plot_fig.clear()
@@ -1363,15 +1274,18 @@ class ExperimentGUI(tk.Toplevel):
                     path = self.paths[path_id]
                     px = [p[0] for p in path]
                     py = [p[1] for p in path]
-                    ax.plot(px, py, color="cyan", linewidth=2, marker='o', markersize=3)
+                    # Bright orange path color
+                    ax.plot(px, py, color="#ff6600", linewidth=2.5, marker='o', markersize=3.5, label='Path')
                 
                 # Add start/goal markers if available (show on all planners)
                 if map_key in self.starts:
                     sx, sy = self.starts[map_key]
-                    ax.plot(sx, sy, 'go', markersize=8, label='Start')
+                    # Keep green for start (intuitive - "go")
+                    ax.plot(sx, sy, 'go', markersize=10, markeredgecolor='darkgreen', markeredgewidth=1.5, label='Start')
                 if map_key in self.goals:
                     gx, gy = self.goals[map_key]
-                    ax.plot(gx, gy, 'ro', markersize=8, label='Goal')
+                    # Keep red for goal
+                    ax.plot(gx, gy, 'ro', markersize=10, markeredgecolor='darkred', markeredgewidth=1.5, label='Goal')
                 
                 # Title with planner info
                 ax.set_title(planner_label, fontsize=10, fontweight='bold')
@@ -1388,15 +1302,6 @@ class ExperimentGUI(tk.Toplevel):
                 ax.set_xticks([])
                 ax.set_yticks([])
         
-        # Add colorbar (shared for all subplots)
-        axes = self.plot_fig.get_axes()
-        if axes:
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
-            sm.set_array([])
-            cbar = self.plot_fig.colorbar(sm, ax=axes, 
-                                         fraction=0.046, pad=0.04)
-            cbar.set_label('Expansion Count', rotation=270, labelpad=15)
-        
         # Update filter options
         map_sizes = sorted(set(df["map_size"].unique()) if not df.empty else [])
         self.plot_map_filter['values'] = ["All"] + list(map_sizes)
@@ -1405,7 +1310,19 @@ class ExperimentGUI(tk.Toplevel):
         self.plot_fig.suptitle(f"Heatmap Comparison: {map_key}", 
                               fontsize=12, fontweight='bold')
         
-        self.plot_fig.tight_layout(rect=[0, 0, 1, 0.95])
+        # Adjust layout to leave space for colorbar on the right
+        self.plot_fig.tight_layout(rect=[0, 0, 0.88, 0.95])
+        
+        # Add colorbar (shared for all subplots) - positioned after tight_layout
+        axes = self.plot_fig.get_axes()
+        if axes:
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            # Position colorbar on the right side with proper spacing
+            cbar = self.plot_fig.colorbar(sm, ax=axes, 
+                                         fraction=0.046, pad=0.08)
+            cbar.set_label('Expansion Count', rotation=270, labelpad=15)
+        
         self.plot_canvas.draw()
     
     # --------------------------------------------------

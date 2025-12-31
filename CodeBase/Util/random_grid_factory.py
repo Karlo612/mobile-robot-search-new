@@ -1,4 +1,10 @@
-# CodeBase/Environment/random_grid_loader.py
+"""
+Random Grid Factory - Random Environment Generation
+
+This module provides functionality to generate random grid environments for
+testing and experimentation. It creates grids with random obstacle placements,
+ensures valid start/goal positions, and handles obstacle inflation.
+"""
 
 import numpy as np
 import random
@@ -12,8 +18,18 @@ from CodeBase.Environment.obstacle import Obstacle
 
 def generate_random_grid(size: int, obstacle_ratio: float) -> np.ndarray:
     """
-    Create random grid with boundary walls.
-    0 = free, 1 = obstacle
+    Create a random grid with boundary walls.
+    
+    Generates a grid where each cell is randomly set to free (0) or obstacle (1)
+    based on the obstacle ratio. The grid always has walls around the boundary
+    to ensure the environment is bounded.
+    
+    Args:
+        size: Grid size (creates size x size grid)
+        obstacle_ratio: Probability that a cell is an obstacle (0.0 to 1.0)
+        
+    Returns:
+        2D numpy array with 0 = free, 1 = obstacle
     """
     grid = np.random.choice(
         [0, 1],
@@ -32,7 +48,16 @@ def generate_random_grid(size: int, obstacle_ratio: float) -> np.ndarray:
 
 def grid_to_obstacles(grid: np.ndarray):
     """
-    Convert obstacle cells (value=1) to Obstacle objects.
+    Convert obstacle cells in a grid array to Obstacle objects.
+    
+    Scans the grid array and creates an Obstacle object for each cell
+    that has value 1 (obstacle).
+    
+    Args:
+        grid: 2D numpy array with 0 = free, 1 = obstacle
+        
+    Returns:
+        List of Obstacle objects with their grid coordinates
     """
     obstacles = []
     h, w = grid.shape
@@ -50,6 +75,23 @@ def manhattan(a, b):
 
 
 def pick_start_goal(grid_map, max_tries=5_000):
+    """
+    Pick valid start and goal positions from safe cells.
+    
+    Randomly selects two distinct safe cells (not obstacles, not inflated)
+    to use as start and goal positions. Tries multiple times to ensure
+    they are distinct.
+    
+    Args:
+        grid_map: GridMap to pick positions from
+        max_tries: Maximum number of attempts to find distinct positions
+        
+    Returns:
+        Tuple ((start_x, start_y), (goal_x, goal_y))
+        
+    Raises:
+        RuntimeError: If not enough safe cells or can't find distinct positions
+    """
     safe_cells = [
         (x, y)
         for y in range(grid_map.height)
@@ -76,9 +118,24 @@ def create_random_grid_environment(
     max_retries: int = 5,
 ):
     """
-    Robust random environment generator.
-
-    Tries up to `max_retries` times before failing.
+    Create a complete random grid environment ready for path planning.
+    
+    Generates a random grid, inflates obstacles based on robot size, and
+    picks valid start/goal positions. Includes retry logic to handle cases
+    where the generated environment might not have a valid path.
+    
+    Args:
+        size: Grid size (creates size x size grid)
+        obstacle_ratio: Ratio of obstacles (0.0 to 1.0)
+        robot_radius: Robot radius in world units
+        resolution: Grid cell size in world units
+        max_retries: Maximum number of attempts if generation fails
+        
+    Returns:
+        Tuple (grid_map, world_map, robot, obstacles)
+        
+    Raises:
+        RuntimeError: If generation fails after max_retries attempts
     """
 
     last_error = None

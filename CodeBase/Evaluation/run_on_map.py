@@ -1,4 +1,10 @@
-# CodeBase/Evaluation/run_on_map.py
+"""
+Run Planner on Map - Headless Path Planning Execution
+
+This module provides functionality to run path planning algorithms headlessly
+(without visualization) on a given environment. It measures performance metrics
+including runtime, memory usage, path length, and node expansions.
+"""
 
 import time
 import tracemalloc
@@ -55,12 +61,6 @@ def run_planner_on_map(env_data, exec_config):
     found = path is not None
     path_len = len(path) if found else 0
 
-    # Check if expansion limit was exceeded
-    exceeded_expansion_limit = getattr(planner, "exceeded_expansion_limit", False)
-    if exceeded_expansion_limit:
-        found = False
-        path_len = 0
-    
     if found and hasattr(planner, "cost"):
         path_cost = sum(
             planner.cost(*p1, *p2)
@@ -84,5 +84,4 @@ def run_planner_on_map(env_data, exec_config):
         "memory_kb": peak / 1024.0,
 
         "expansion_map": getattr(planner, "expansion_map", {}),
-        "exceeded_expansion_limit": exceeded_expansion_limit,
     }

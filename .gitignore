@@ -140,6 +140,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+venv311/
 ENV/
 env.bak/
 venv.bak/
@@ -206,8 +207,22 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-#project files
+# macOS system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows Zone.Identifier files (alternative/additional pattern for filename:Zone.Identifier format)
+*:Zone.Identifier
+Zone.Identifier
+
+# Project output files
 *.png
 *.csv
 *.npz
 *.Identifier
+
+# Output directories
+plots/
