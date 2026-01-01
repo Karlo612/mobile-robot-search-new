@@ -147,6 +147,10 @@ class ExperimentGUI(tk.Toplevel):
         self.btn_view_results.pack(fill="x", pady=4)
         self.btn_view_results.config(state="disabled")
 
+        self.btn_export_csv = ttk.Button(left, text="Export CSV", command=self._export_csv)
+        self.btn_export_csv.pack(fill="x", pady=4)
+        self.btn_export_csv.config(state="disabled")
+
         # ---- Progress ----
         ttk.Label(left, text="Progress").pack(anchor="w", pady=(10, 0))
         self.progress = ttk.Progressbar(left, mode="determinate")
@@ -197,7 +201,9 @@ class ExperimentGUI(tk.Toplevel):
             state = "disabled" if running else "normal"
             self.btn_generate.configure(state=state)
             self.btn_run.configure(state=state)
-            self.btn_view_results.configure(state=("normal" if (not running and self.results) else "disabled"))
+            has_results = not running and self.results
+            self.btn_view_results.configure(state=("normal" if has_results else "disabled"))
+            self.btn_export_csv.configure(state=("normal" if has_results else "disabled"))
 
         self.after(0, apply)
 
@@ -1404,3 +1410,108 @@ class ExperimentGUI(tk.Toplevel):
             self._update_table()
             self._update_plot()
             self._update_stats()
+    
+    def _export_csv(self):
+        """Export results table data to CSV file"""
+        if not self.results:
+            messagebox.showwarning("No Data", "No results available to export.")
+            return
+        
+        from tkinter import filedialog
+        import csv
+        from datetime import datetime
+        
+        # Get filter values (same as used in table)
+        planner_filter = self.filter_planner.get()
+        size_filter = self.filter_size.get()
+        
+        # Filter results (same logic as _update_table)
+        filtered_results = []
+        for result in self.results:
+            planner = result.get("planner", "")
+            size = result.get("map_size", "")
+            
+            if planner_filter != "All" and planner != planner_filter:
+                continue
+            if size_filter != "All" and size != size_filter:
+                continue
+            
+            filtered_results.append(result)
+        
+        if not filtered_results:
+            messagebox.showwarning("No Data", "No results match the current filters.")
+            return
+        
+        # Generate default filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_filename = f"experiment_results_{timestamp}.csv"
+        
+        # Ask user for save location
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            initialfile=default_filename,
+            title="Export Results to CSV"
+        )
+        
+        if filepath:
+            try:
+                # Define CSV columns (matching table columns)
+                columns = [
+                    "Planner", "Mode", "Map Size", "Map ID", 
+                    "Runtime (ms)", "Expanded Nodes", "Path Length", 
+                    "Path Cost", "Memory (KB)", "Found", "Status"
+                ]
+                
+                # Write CSV file
+                with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+                    writer = csv.writer(csvfile)
+                    
+                    # Write header
+                    writer.writerow(columns)
+                    
+                    # Write data rows
+                    for result in filtered_results:
+                        mode = "Tree" if result.get("tree", False) else "Graph"
+                        found = "Yes" if result.get("found", False) else "No"
+                        
+                        # Determine status
+                        expanded = result.get("expanded_nodes", 0)
+                        max_exp = result.get("max_expansions", 0)
+                        found_bool = result.get("found", False)
+                        if max_exp > 0 and expanded >= max_exp and not found_bool:
+                            status = "Limit Reached"
+                        elif found_bool:
+                            status = "Success"
+                        else:
+                            status = "Failed"
+                        
+                        # Format values (matching table display)
+                        runtime = f"{result.get('runtime_ms', 0):.2f}"
+                        expanded_nodes = str(result.get("expanded_nodes", "N/A"))
+                        path_len = str(result.get("path_len", "N/A"))
+                        path_cost = f"{result.get('path_cost', 0):.2f}" if result.get("path_cost") != float('inf') else "N/A"
+                        memory = f"{result.get('memory_kb', 0):.2f}"
+                        
+                        row = [
+                            result.get("planner", ""),
+                            mode,
+                            result.get("map_size", ""),
+                            str(result.get("map_id", "")),
+                            runtime,
+                            expanded_nodes,
+                            path_len,
+                            path_cost,
+                            memory,
+                            found,
+                            status
+                        ]
+                        
+                        writer.writerow(row)
+                
+                messagebox.showinfo(
+                    "Success", 
+                    f"Results exported to:\n{filepath}\n\n{len(filtered_results)} rows exported."
+                )
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to export CSV:\n{str(e)}")
